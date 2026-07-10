@@ -1,13 +1,11 @@
 import { useState, useCallback, useEffect, useRef, createContext } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Settings } from 'lucide-react';
 import { HashRouter, Routes, Route } from 'react-router-dom';
 import WelcomeScreen from './components/WelcomeScreen';
 import ChatArea from './components/ChatArea';
 import InputBar from './components/InputBar';
 import Navbar from './components/Navbar';
-import ScrollToBottom from './components/ScrollToBottom';
-import ChatMessage, { type Message } from './components/ChatMessage';
+import { type Message } from './components/ChatMessage';
 import Admin from './pages/Admin';
 import { sendMessage } from './services/ai';
 import { getInlineVizPrompt } from './services/visualization';
@@ -75,20 +73,18 @@ function ChatInterface() {
         // Add inline visualization + choice system prompt
         const inlineVizPrompt = getInlineVizPrompt();
         const choicePrompt =
-          "\n\nALWAYS end your response with multiple choice options using this exact format: [CHOICE:option 1|option 2|option 3]. Keep options concise (2-5 words each).";
+          "\n\nCRITICAL: Every response MUST end with clickable multiple choice options using this exact format: [CHOICE:option 1|option 2|option 3]. Options must be concise (2-5 words each). Always include a 'Lainnya...' option as the last choice so the user can type freely.";
         const apiMessagesWithSystem: Array<{
           role: string;
           content: string;
         }> = [...finalApiMessages];
-        if (inlineVizPrompt) {
-          apiMessagesWithSystem.unshift({
-            role: 'system',
-            content:
-              'You are Pesat AI Business Architect, an expert business consultant.' +
-              inlineVizPrompt +
-              choicePrompt,
-          });
-        }
+        apiMessagesWithSystem.unshift({
+          role: 'system',
+          content:
+            'You are Pesat AI Business Architect, an expert business consultant.' +
+            (inlineVizPrompt || '') +
+            choicePrompt,
+        });
 
         const response = await sendMessage(apiMessagesWithSystem);
         const aiText = response.content || 'Maaf, terjadi kesalahan.';
@@ -136,20 +132,7 @@ function ChatInterface() {
     }
   }, [handleSendMessage]);
 
-  // Handle scroll to bottom
-  const [showScrollButton, setShowScrollButton] = useState(false);
   const chatContainerRef = useRef<HTMLDivElement>(null);
-
-  useEffect(() => {
-    const el = chatContainerRef.current;
-    if (!el) return;
-    const handleScroll = () => {
-      const threshold = el.scrollHeight - el.clientHeight - 100;
-      setShowScrollButton(el.scrollTop < threshold);
-    };
-    el.addEventListener('scroll', handleScroll);
-    return () => el.removeEventListener('scroll', handleScroll);
-  }, []);
 
   // Auto-scroll to bottom on new messages
   useEffect(() => {
@@ -158,8 +141,6 @@ function ChatInterface() {
         chatContainerRef.current.scrollHeight;
     }
   }, [messages, isTyping]);
-
-  const isLastAI = messages.length > 0 && messages[messages.length - 1].role === 'assistant';
 
   return (
     <div className="h-screen flex flex-col bg-[#0B0F1A] overflow-hidden">

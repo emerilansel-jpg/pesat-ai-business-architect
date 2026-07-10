@@ -1,9 +1,11 @@
-import { memo, useState, useMemo } from 'react';
+import { memo, useState, useEffect, useMemo } from 'react';
 import { motion } from 'framer-motion';
 import { Copy, Check, RefreshCw, ImageOff } from 'lucide-react';
 import { marked } from 'marked';
 import AIAvatar from './AIAvatar';
-import { parseInlineImages } from '../services/visualization';
+import { parseInlineImages, buildDallePrompt } from '../services/visualization';
+import { generateImage } from '../services/ai';
+import { loadSettings } from '../services/settings';
 
 marked.setOptions({
   breaks: true,
@@ -40,7 +42,7 @@ function parseChoices(text: string): { cleanText: string; choices: string[] } {
   let match;
   while ((match = choiceRegex.exec(text)) !== null) {
     match[1].split('|').forEach((c) => {
-      const trimmed = c.trim();
+      const trimmed = c.trim().replace(/^\s*[-•]\s*/, '');
       if (trimmed) choices.push(trimmed);
     });
   }
@@ -74,6 +76,8 @@ const ChatMessage = memo(function ChatMessage({
 }: ChatMessageProps) {
   const [copied, setCopied] = useState(false);
   const [showActions, setShowActions] = useState(false);
+  const [imageUrls, setImageUrls] = useState<Record<number, string>>({});
+  const [imageGenerating, setImageGenerating] = useState<Record<number, boolean>>({});
   const [imageLoaded, setImageLoaded] = useState<Record<number, boolean>>({});
   const [imageError, setImageError] = useState<Record<number, boolean>>({});
   const isAI = message.role === 'assistant';
@@ -82,19 +86,52 @@ const ChatMessage = memo(function ChatMessage({
   const { cleanText, choices } = isAI
     ? parseChoices(message.content)
     : { cleanText: message.content, choices: [] };
+  const displayChoices = choices.filter((c) => c !== 'Lainnya...');
 
   // Parse inline images for AI messages
-  const { segments } = isAI ? parseInlineImages(cleanText) : { segments: [] };
+  const { segments } = useMemo(() => {
+    return isAI ? parseInlineImages(cleanText) : { segments: [] };
+  }, [cleanText, isAI]);
 
-  // Pre-generate deterministic image URLs
-  const imageUrls = useMemo(() => {
-    const urls: Record<number, string> = {};
-    segments.forEach((seg, i) => {
-      if (seg.type === 'image') {
-        urls[i] = getPollinationsUrl(seg.description, i);
+  // Generate DALL-E 3 images asynchronously, falling back to Pollinations
+  useEffect(() => {
+    let cancelled = false;
+
+    async function generateImages() {
+      const generating: Record<number, boolean> = {};
+      segments.forEach((seg, i) => {
+        if (seg.type === 'image') generating[i] = true;
+      });
+      setImageGenerating(generating);
+
+      const urls: Record<number, string> = {};
+
+      for (let i = 0; i < segments.length; i++) {
+        const seg = segments[i];
+        if (seg.type !== 'image') continue;
+
+        try {
+          const settings = loadSettings();
+          if (!settings.autoImageGen) {
+            urls[i] = getPollinationsUrl(seg.description || '', i);
+          } else {
+            const prompt = buildDallePrompt(seg.description || '', settings.imageStyle);
+            const result = await generateImage(prompt, 1);
+            urls[i] = result.imageUrls[0] || getPollinationsUrl(seg.description || '', i);
+          }
+        } catch {
+          urls[i] = getPollinationsUrl(seg.description || '', i);
+        }
       }
-    });
-    return urls;
+
+      if (!cancelled) {
+        setImageUrls(urls);
+        setImageGenerating({});
+      }
+    }
+
+    generateImages();
+    return () => { cancelled = true; };
   }, [segments]);
 
   const handleCopy = async () => {
@@ -150,6 +187,7 @@ const ChatMessage = memo(function ChatMessage({
               }
               // Image segment - render inline image card
               const url = imageUrls[segIdx];
+              const isGenerating = imageGenerating[segIdx];
               const hasError = imageError[segIdx];
               const hasLoaded = imageLoaded[segIdx];
               return (
@@ -158,7 +196,7 @@ const ChatMessage = memo(function ChatMessage({
                   className="my-4 rounded-xl overflow-hidden border border-[rgba(124,58,237,0.2)] bg-[#0B0F1A]"
                 >
                   {/* Loading state */}
-                  {!hasLoaded && !hasError && (
+                  {(!url || isGenerating || (!hasLoaded && !hasError)) && (
                     <div className="w-full h-[180px] flex flex-col items-center justify-center gap-2 bg-gradient-to-br from-[#111827] to-[#0B0F1A]">
                       <div className="w-8 h-8 rounded-full border-2 border-[#7C3AED] border-t-transparent animate-spin" />
                       <span className="text-[11px] text-[#64748B]">
@@ -196,6 +234,7 @@ const ChatMessage = memo(function ChatMessage({
                         setImageLoaded((prev) => ({ ...prev, [segIdx]: true }))
                       }
                       onError={() => {
+                        // Mark loaded so the spinner hides; error state shows the error UI
                         setImageError((prev) => ({ ...prev, [segIdx]: true }));
                         setImageLoaded((prev) => ({ ...prev, [segIdx]: true }));
                       }}
@@ -222,7 +261,7 @@ const ChatMessage = memo(function ChatMessage({
                   Pilih jawaban:
                 </p>
                 <div className="flex flex-wrap gap-2.5">
-                  {choices.map((choice, i) => (
+                  {displayChoices.map((choice, i) => (
                     <motion.button
                       key={i}
                       initial={{ opacity: 0, y: 8 }}
@@ -243,7 +282,7 @@ const ChatMessage = memo(function ChatMessage({
                     initial={{ opacity: 0, y: 8 }}
                     animate={{ opacity: 1, y: 0 }}
                     transition={{
-                      delay: 0.1 + choices.length * 0.08,
+                      delay: 0.1 + displayChoices.length * 0.08,
                       duration: 0.3,
                       ease: easeOutExpo,
                     }}

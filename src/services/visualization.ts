@@ -1,4 +1,4 @@
-import { loadSettings } from './settings';
+import { loadSettings, type AdvisorSettings } from './settings';
 
 // Prompt to generate inline image tags within the response
 const INLINE_VIZ_SYSTEM_PROMPT = `You are a UX and Data Visualization expert. When responding, insert image visualization markers at strategic points within your text to make the response more visual and easier to understand.
@@ -85,21 +85,12 @@ export async function generateInlineImages(
     description?: string;
   }> = [];
 
-  const styleNote =
-    settings.imageStyle === 'professional'
-      ? 'Professional corporate style, clean lines, executive dashboard aesthetic, navy and purple gradients.'
-      : settings.imageStyle === 'creative'
-      ? 'Creative modern style, bold shapes, artistic composition, vibrant purple and dark blue gradients.'
-      : settings.imageStyle === 'minimal'
-      ? 'Ultra-minimal infographic, generous whitespace, subtle purple accents on dark background.'
-      : 'Data-driven analytics style, prominent charts and graphs, dashboard aesthetic, KPI cards.';
-
   let imageIndex = 0;
   for (const seg of segments) {
     if (seg.type === 'text') {
       result.push({ type: 'text', content: seg.content || '' });
     } else if (seg.type === 'image') {
-      const enhancedPrompt = `${seg.description} ${styleNote} Dark navy (#0B0F1A) background with purple (#7C3AED) accents. Modern business aesthetic, high quality, clean, no text or letters.`;
+      const enhancedPrompt = buildDallePrompt(seg.description || '', settings.imageStyle);
       const url = makePollinationsUrl(enhancedPrompt, Date.now() + imageIndex * 1000);
       result.push({ type: 'image', url, description: seg.description });
       imageIndex++;
@@ -114,4 +105,17 @@ export function getInlineVizPrompt(): string {
   const settings = loadSettings();
   if (!settings.autoImageGen) return '';
   return '\n\n' + INLINE_VIZ_SYSTEM_PROMPT;
+}
+
+export function buildDallePrompt(description: string, style: AdvisorSettings['imageStyle']): string {
+  const styleNote =
+    style === 'professional'
+      ? 'Professional corporate style, clean lines, executive dashboard aesthetic, navy and purple gradients.'
+      : style === 'creative'
+      ? 'Creative modern style, bold shapes, artistic composition, vibrant purple and dark blue gradients.'
+      : style === 'minimal'
+      ? 'Ultra-minimal infographic, generous whitespace, subtle purple accents on dark background.'
+      : 'Data-driven analytics style, prominent charts and graphs, dashboard aesthetic, KPI cards.';
+
+  return `${description} ${styleNote} Dark navy (#0B0F1A) background with purple (#7C3AED) accents. Modern business aesthetic, high quality, clean, no text or letters.`;
 }

@@ -9,4 +9,12 @@ export default defineConfig({
       '@': path.resolve(__dirname, './src'),
     },
   },
+  server: {
+    proxy: {
+      '/api': {
+        target: 'https://apps.pesat.ai',
+        changeOrigin: true,
+      },
+    },
+  },
 })
