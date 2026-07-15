@@ -21,7 +21,7 @@ import {
   Send,
   DollarSign,
 } from 'lucide-react';
-import { testConnection, sendTextOnlyMessage, type TestResult } from '../services/ai';
+import { testConnection, sendTextOnlyMessage, generateImage, type TestResult } from '../services/ai';
 import {
   loadSettings,
   saveSettings,
@@ -42,6 +42,10 @@ export default function Admin() {
   const [showKeys, setShowKeys] = useState<Record<string, boolean>>({});
   const [saved, setSaved] = useState(false);
   const [testResults, setTestResults] = useState<Record<string, TestResult & { loading?: boolean }>>({});
+  const [imageTestResult, setImageTestResult] = useState<TestResult & { loading?: boolean }>({
+    ok: false,
+    latency: 0,
+  });
   const [stepTestResults, setStepTestResults] = useState<
     Record<number, { response: string; loading: boolean }>
   >({});
@@ -82,6 +86,19 @@ export default function Admin() {
     setTestResults((prev) => ({ ...prev, [type]: { ok: false, latency: 0, loading: true } }));
     const result = await testConnection(type);
     setTestResults((prev) => ({ ...prev, [type]: { ...result, loading: false } }));
+  }, []);
+
+  const runImageTest = useCallback(async () => {
+    setImageTestResult({ ok: false, latency: 0, loading: true });
+    const start = performance.now();
+    try {
+      await generateImage('a simple test image of a blue water drop', 1);
+      const latency = Math.round(performance.now() - start);
+      setImageTestResult({ ok: true, latency, loading: false });
+    } catch (e: any) {
+      const latency = Math.round(performance.now() - start);
+      setImageTestResult({ ok: false, latency, loading: false, error: e.message || 'Failed' });
+    }
   }, []);
 
   // Redirect if not authenticated
@@ -297,7 +314,7 @@ export default function Admin() {
         {/* ======== IMAGE AI PROVIDER ======== */}
         <Section title="Image AI Provider" icon={<Image className="w-4 h-4 text-[#7C3AED]" />}>
           <Toggle
-            label="OpenAI DALL-E 3"
+            label="OpenAI gpt-image-1"
             enabled={settings.imageProvider === 'openai-image'}
             onChange={(val) => updateSetting('imageProvider', val ? 'openai-image' : 'openai-image')}
           />
@@ -312,8 +329,8 @@ export default function Admin() {
           <TestButton
             type="openai"
             label="Test Image Generation"
-            result={testResults['openai-image']}
-            onTest={() => runTest('openai')}
+            result={imageTestResult}
+            onTest={runImageTest}
           />
         </Section>
 

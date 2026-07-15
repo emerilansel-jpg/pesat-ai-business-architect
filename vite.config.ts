@@ -2,7 +2,11 @@ import { defineConfig } from 'vite'
 import react from '@vitejs/plugin-react'
 import path from 'path'
 
+// Use /advisor/ base for production builds, default / for local dev
+const base = process.env.VITE_BASE_PATH || '/'
+
 export default defineConfig({
+  base,
   plugins: [react()],
   resolve: {
     alias: {
@@ -12,7 +16,7 @@ export default defineConfig({
   server: {
     proxy: {
       '/api': {
-        target: 'https://apps.pesat.ai',
+        target: 'http://localhost:3001',
         changeOrigin: true,
       },
     },

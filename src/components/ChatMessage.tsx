@@ -1,11 +1,12 @@
-import { memo, useState, useEffect, useMemo } from 'react';
+import { memo, useState, useEffect, useMemo, useCallback } from 'react';
 import { motion } from 'framer-motion';
-import { Copy, Check, RefreshCw, ImageOff } from 'lucide-react';
+import { Copy, Check, RefreshCw, ImageOff, Wand2, Loader2 } from 'lucide-react';
 import { marked } from 'marked';
 import AIAvatar from './AIAvatar';
 import { parseInlineImages, buildDallePrompt } from '../services/visualization';
 import { generateImage } from '../services/ai';
 import { loadSettings } from '../services/settings';
+import { useActivity } from '../contexts/ActivityContext';
 
 marked.setOptions({
   breaks: true,
@@ -80,6 +81,8 @@ const ChatMessage = memo(function ChatMessage({
   const [imageGenerating, setImageGenerating] = useState<Record<number, boolean>>({});
   const [imageLoaded, setImageLoaded] = useState<Record<number, boolean>>({});
   const [imageError, setImageError] = useState<Record<number, boolean>>({});
+  const [manualRequested, setManualRequested] = useState<Record<number, boolean>>({});
+  const { addLog, finishLog } = useActivity();
   const isAI = message.role === 'assistant';
 
   // Parse choices from content
@@ -93,14 +96,48 @@ const ChatMessage = memo(function ChatMessage({
     return isAI ? parseInlineImages(cleanText) : { segments: [] };
   }, [cleanText, isAI]);
 
-  // Generate DALL-E 3 images asynchronously, falling back to Pollinations
+  const generateOneImage = useCallback(
+    async (index: number, description: string) => {
+      setImageGenerating((prev) => ({ ...prev, [index]: true }));
+      setImageLoaded((prev) => ({ ...prev, [index]: false }));
+      setImageError((prev) => ({ ...prev, [index]: false }));
+      addLog('Sedang gambar visual lucu... 🎨', 'image');
+
+      try {
+        const settings = loadSettings();
+        const prompt = buildDallePrompt(description || '', settings.imageStyle);
+        const result = await generateImage(prompt, 1);
+        const url = result.imageUrls[0] || getPollinationsUrl(description, index);
+        setImageUrls((prev) => ({ ...prev, [index]: url }));
+        finishLog('Visual jadi! 🎨', 'success');
+      } catch {
+        const fallback = getPollinationsUrl(description, index);
+        setImageUrls((prev) => ({ ...prev, [index]: fallback }));
+        finishLog('Visual jadi pakai fallback! 🎨', 'success');
+      } finally {
+        setImageGenerating((prev) => ({ ...prev, [index]: false }));
+      }
+    },
+    [addLog, finishLog]
+  );
+
+  const handleManualGenerate = useCallback(
+    (index: number, description: string) => {
+      setManualRequested((prev) => ({ ...prev, [index]: true }));
+      generateOneImage(index, description);
+    },
+    [generateOneImage]
+  );
+
+  // Generate images asynchronously, falling back to Pollinations
   useEffect(() => {
     let cancelled = false;
 
     async function generateImages() {
+      const settings = loadSettings();
       const generating: Record<number, boolean> = {};
       segments.forEach((seg, i) => {
-        if (seg.type === 'image') generating[i] = true;
+        if (seg.type === 'image' && settings.autoImageGen) generating[i] = true;
       });
       setImageGenerating(generating);
 
@@ -110,15 +147,15 @@ const ChatMessage = memo(function ChatMessage({
         const seg = segments[i];
         if (seg.type !== 'image') continue;
 
+        if (!settings.autoImageGen) {
+          // Manual mode: leave a generate button, do not auto-generate
+          continue;
+        }
+
         try {
-          const settings = loadSettings();
-          if (!settings.autoImageGen) {
-            urls[i] = getPollinationsUrl(seg.description || '', i);
-          } else {
-            const prompt = buildDallePrompt(seg.description || '', settings.imageStyle);
-            const result = await generateImage(prompt, 1);
-            urls[i] = result.imageUrls[0] || getPollinationsUrl(seg.description || '', i);
-          }
+          const prompt = buildDallePrompt(seg.description || '', settings.imageStyle);
+          const result = await generateImage(prompt, 1);
+          urls[i] = result.imageUrls[0] || getPollinationsUrl(seg.description || '', i);
         } catch {
           urls[i] = getPollinationsUrl(seg.description || '', i);
         }
@@ -126,12 +163,20 @@ const ChatMessage = memo(function ChatMessage({
 
       if (!cancelled) {
         setImageUrls(urls);
-        setImageGenerating({});
+        setImageGenerating((prev) => {
+          const next = { ...prev };
+          segments.forEach((_, i) => {
+            if (next[i]) next[i] = false;
+          });
+          return next;
+        });
       }
     }
 
     generateImages();
-    return () => { cancelled = true; };
+    return () => {
+      cancelled = true;
+    };
   }, [segments]);
 
   const handleCopy = async () => {
@@ -190,24 +235,54 @@ const ChatMessage = memo(function ChatMessage({
               const isGenerating = imageGenerating[segIdx];
               const hasError = imageError[segIdx];
               const hasLoaded = imageLoaded[segIdx];
+              const isManualReady = !url && !isGenerating && !manualRequested[segIdx];
+
               return (
                 <div
                   key={segIdx}
                   className="my-4 rounded-xl overflow-hidden border border-[rgba(124,58,237,0.2)] bg-[#0B0F1A]"
                 >
-                  {/* Loading state */}
-                  {(!url || isGenerating || (!hasLoaded && !hasError)) && (
-                    <div className="w-full h-[180px] flex flex-col items-center justify-center gap-2 bg-gradient-to-br from-[#111827] to-[#0B0F1A]">
-                      <div className="w-8 h-8 rounded-full border-2 border-[#7C3AED] border-t-transparent animate-spin" />
+                  {/* Manual generate prompt */}
+                  {isManualReady && (
+                    <div className="w-full aspect-square flex flex-col items-center justify-center gap-3 px-6 text-center bg-gradient-to-br from-[#111827] to-[#0B0F1A]">
+                      <div className="w-12 h-12 rounded-full bg-[rgba(124,58,237,0.12)] flex items-center justify-center">
+                        <Wand2 className="w-6 h-6 text-[#7C3AED]" />
+                      </div>
+                      <div>
+                        <p className="text-[14px] font-medium text-[#F8FAFC] mb-1">
+                          Visualisasi AI siap dibuat
+                        </p>
+                        <p className="text-[12px] text-[#94A3B8] leading-relaxed">
+                          {seg.description.substring(0, 90)}
+                          {seg.description.length > 90 ? '...' : ''}
+                        </p>
+                      </div>
+                      <button
+                        onClick={() => handleManualGenerate(segIdx, seg.description)}
+                        className="mt-1 inline-flex items-center gap-2 px-4 py-2.5 bg-[#7C3AED] hover:bg-[#8B5CF6] text-white rounded-xl text-[13px] font-semibold transition-all active:scale-95 shadow-[0_4px_16px_rgba(124,58,237,0.3)]"
+                      >
+                        <Wand2 className="w-3.5 h-3.5" />
+                        Generate visual
+                      </button>
                       <span className="text-[11px] text-[#64748B]">
-                        Menghasilkan visualisasi...
+                        ±15–30 detik
+                      </span>
+                    </div>
+                  )}
+
+                  {/* Loading state */}
+                  {isGenerating && (
+                    <div className="w-full aspect-square flex flex-col items-center justify-center gap-2 bg-gradient-to-br from-[#111827] to-[#0B0F1A]">
+                      <Loader2 className="w-8 h-8 text-[#7C3AED] animate-spin" />
+                      <span className="text-[11px] text-[#64748B]">
+                        Membuat visual... (±15–30 detik)
                       </span>
                     </div>
                   )}
 
                   {/* Error state */}
                   {hasError && (
-                    <div className="w-full h-[120px] flex flex-col items-center justify-center gap-2 bg-[#111827]">
+                    <div className="w-full aspect-square flex flex-col items-center justify-center gap-2 bg-[#111827]">
                       <ImageOff className="w-6 h-6 text-[#64748B]" />
                       <span className="text-[11px] text-[#64748B]">Gagal memuat gambar</span>
                       <button
@@ -223,12 +298,12 @@ const ChatMessage = memo(function ChatMessage({
                   )}
 
                   {/* Image */}
-                  {!hasError && (
+                  {!hasError && !isManualReady && (
                     <img
                       src={url}
                       alt={seg.description}
-                      className={`w-full object-cover transition-opacity duration-700 ${
-                        hasLoaded ? 'opacity-100 max-h-[260px]' : 'opacity-0 h-0'
+                      className={`w-full h-auto aspect-square object-contain transition-opacity duration-700 ${
+                        hasLoaded ? 'opacity-100' : 'opacity-0 h-0'
                       }`}
                       onLoad={() =>
                         setImageLoaded((prev) => ({ ...prev, [segIdx]: true }))
@@ -243,11 +318,8 @@ const ChatMessage = memo(function ChatMessage({
 
                   {/* Caption bar */}
                   <div className="flex items-center justify-between px-3 py-2 bg-[#111827]">
-                    <span className="px-2 py-0.5 bg-[rgba(124,58,237,0.15)] border border-[rgba(124,58,237,0.25)] rounded-full text-[10px] font-bold text-[#A78BFA] uppercase tracking-wider">
-                      Visualisasi AI
-                    </span>
-                    <span className="text-[11px] text-[#64748B] truncate ml-2 max-w-[200px]">
-                      {seg.description.substring(0, 50)}...
+                    <span className="text-[11px] text-[#64748B] truncate max-w-[260px]">
+                      {seg.description.substring(0, 60)}...
                     </span>
                   </div>
                 </div>

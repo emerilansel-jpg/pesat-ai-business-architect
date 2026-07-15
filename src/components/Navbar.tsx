@@ -1,5 +1,6 @@
 import { memo } from 'react';
 import { Sparkles, Settings } from 'lucide-react';
+import { Link } from 'react-router-dom';
 import LogoIcon from './LogoIcon';
 
 const Navbar = memo(function Navbar() {
@@ -7,12 +8,12 @@ const Navbar = memo(function Navbar() {
     <header className="fixed top-0 left-0 right-0 z-50 h-16 bg-[rgba(11,15,26,0.8)] backdrop-blur-[20px] border-b border-[rgba(124,58,237,0.1)]">
       <div className="max-w-[900px] mx-auto h-full flex items-center justify-between px-4 md:px-6">
         {/* Logo Group */}
-        <a href="#/" className="group flex items-center gap-2.5">
+        <Link to="/" className="group flex items-center gap-2.5">
           <LogoIcon />
           <span className="hidden md:block text-xl font-bold text-[#F8FAFC] tracking-tight">
             pesat<span className="text-[#7C3AED]">.ai</span>
           </span>
-        </a>
+        </Link>
 
         {/* Center: AI Advisor Label + Status */}
         <div className="flex items-center gap-3">
@@ -35,13 +36,13 @@ const Navbar = memo(function Navbar() {
           <div className="w-px h-5 bg-[#232A45]" />
 
           {/* Settings gear → admin */}
-          <button
-            onClick={() => { window.location.hash = '#/admin'; }}
+          <Link
+            to="/admin"
             className="flex items-center justify-center w-8 h-8 min-w-[32px] min-h-[32px] rounded-lg text-[#64748B] hover:text-[#8B5CF6] hover:bg-[rgba(124,58,237,0.1)] transition-all duration-200"
             title="Admin Settings"
           >
             <Settings className="w-[18px] h-[18px]" />
-          </button>
+          </Link>
         </div>
       </div>
     </header>

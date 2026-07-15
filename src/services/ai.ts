@@ -2,7 +2,10 @@
 const PROXY_URL = '/api';
 import { loadSettings } from './settings';
 
-export async function sendMessage(messages: Array<{role: string; content: string}>) {
+export async function sendMessage(
+  messages: Array<{ role: string; content: string }>,
+  options?: { signal?: AbortSignal }
+) {
   const settings = loadSettings();
   const provider = settings.textProvider;
   const model = provider === 'openai' ? settings.openaiModel : settings.deepseekModel;
@@ -12,6 +15,7 @@ export async function sendMessage(messages: Array<{role: string; content: string
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({ provider, model, messages, apiKey, temperature: 0.8 }),
+    signal: options?.signal,
   });
   if (!response.ok) throw new Error(`API error: ${response.status}`);
   return response.json();

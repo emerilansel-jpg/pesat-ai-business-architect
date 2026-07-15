@@ -6,10 +6,11 @@
 
 ## Project Overview
 
-**Name**: Pesat AI Business Architect
-**URL**: https://apps.pesat.ai/advisor/
-**Type**: AI-powered business consultant chatbot (React SPA)
-**Purpose**: Users describe their business, AI analyzes it, conducts interview, generates WOW report with inline visualizations, and closes with pricing/CTA.
+**Name**: Pesat AI Business Architect  
+**URL**: https://apps.pesat.ai/advisor/  
+**Admin**: https://apps.pesat.ai/advisor/admin (password: `jdp123`)  
+**Type**: AI-powered business consultant chatbot (React SPA)  
+**Purpose**: Users describe their business, AI analyzes it, conducts an interview, generates a WOW report with inline visualizations, and closes with pricing/CTA.
 
 ---
 
@@ -18,32 +19,40 @@
 | Layer | Tech |
 |-------|------|
 | Frontend | React 19 + TypeScript + Vite + Tailwind CSS v3 |
-| Router | HashRouter (react-router-dom) |
+| Router | BrowserRouter with basename `/advisor` |
 | Animations | Framer Motion |
 | Icons | Lucide React |
 | Markdown | marked |
-| Image Gen | Pollinations.ai (Flux model, free) |
+| Image Gen | OpenAI gpt-image-1 (default), Pollinations.ai fallback |
 | AI Text | OpenAI GPT-4o / DeepSeek via proxy |
-| Backend | Node.js proxy on VPS (nginx reverse proxy) |
+| Backend | Node.js proxy on VPS managed by PM2 |
+| Reverse Proxy | Dockerized Caddy via `pesat-control-plane` |
+| Ingress | Cloudflare tunnel |
 
 ---
 
 ## Architecture
 
 ```
-User Browser <- Nginx (80/443) <- Node Proxy (localhost:3000) <- OpenAI/DeepSeek API
-                    |
-               Static Files
-               (/var/www/advisor/)
+User Browser
+    ↓
+Cloudflare tunnel
+    ↓
+Caddy (pesat-control-plane) on VPS :80/:443
+    ├── /api/*   → reverse_proxy → Node proxy (localhost:3002)
+    └── /*       → static files  → /builds/{labels.2}
 ```
 
 ### Proxy Endpoints
+
 | Endpoint | Purpose |
 |----------|---------|
 | `/api/chat` | Text generation (OpenAI/DeepSeek) |
-| `/api/image` | Image generation (DALL-E) |
+| `/api/image` | Image generation (OpenAI gpt-image-1) |
 | `/api/search` | Web search (Tavily) |
 | `/api/health` | Health check |
+
+> **Note:** Caddy strips the `/api` prefix before forwarding to the proxy. The proxy sees `/chat`, `/image`, `/search`, `/health`.
 
 ---
 
@@ -56,19 +65,23 @@ src/
   index.css               # Global styles + markdown-body + animations
   components/
     Navbar.tsx            # Top bar: logo, title, settings link
-    WelcomeScreen.tsx     # Landing: particles, heading, NO conversation chip
+    WelcomeScreen.tsx     # Landing: particles, heading
     ChatArea.tsx          # Scrollable message list
     ChatMessage.tsx       # Individual message: markdown + inline images + choices
     ChatMessage.css       # Markdown styles
     InputBar.tsx          # Bottom input with auto-resize textarea
     ScrollToBottom.tsx    # Floating scroll-to-bottom button
     AIAvatar.tsx          # AI avatar with gradient + online dot
+    ActivityPanel.tsx     # Fun game-like status panel (minion, XP bar, badges)
+  contexts/
+    ActivityContext.tsx   # Activity log state, typewriter effect, stage state
   pages/
     Admin.tsx             # Settings panel with password auth
   services/
     ai.ts                 # API calls: sendMessage, generateImage, webSearch, testConnection
-    visualization.ts      # Parse [IMAGE:...] tags, generate Pollinations URLs
+    visualization.ts      # Parse [IMAGE:...] tags, generate image URLs
     settings.ts           # Settings interface, load/save, step prompts
+    mainPrompt.ts         # MAIN_SYSTEM_PROMPT
   lib/
     utils.ts              # cn() helper
   hooks/
@@ -83,35 +96,42 @@ src/
 AI responses can include `[IMAGE:description]` tags. These are parsed and rendered as images INLINE between text paragraphs.
 
 **How it works**:
-1. System prompt instructs AI to insert `[IMAGE:...]` tags between paragraphs
-2. `parseInlineImages()` in `visualization.ts` splits text into segments
-3. `ChatMessage.tsx` renders: text segment -> image card -> text segment -> image card
-4. Image URLs generated via Pollinations.ai with deterministic seed
-
-**Image model**: `model=flux` (Pollinations.ai)
+1. System prompt instructs AI to insert `[IMAGE:...]` tags between paragraphs.
+2. `parseInlineImages()` in `visualization.ts` splits text into segments.
+3. `ChatMessage.tsx` renders: text segment → image card → text segment → image card.
+4. Image URLs generated via Pollinations.ai or OpenAI gpt-image-1.
 
 ### 2. Multiple Choice Buttons
 AI responses end with `[CHOICE:option1|option2|option3]` tags.
 
 **How it works**:
 1. System prompt: `ALWAYS end your response with [CHOICE:...]`
-2. `parseChoices()` extracts choices and removes tag from displayed text
-3. Renders as prominent purple gradient buttons below AI message
-4. `onClick` handler
-5. "Lainnya... (ketik sendiri)" button focuses input field
+2. `parseChoices()` extracts choices and removes the tag from displayed text.
+3. Renders as prominent purple gradient buttons below the AI message.
+4. `onClick` handler sends the selected choice.
+5. "Lainnya..." button focuses the input field.
 
-### 3. Conversation Flow (6 Steps)
-1. **Deep Research** — AI analyzes business info
-2. **Interview (3 questions)** — Strategic questions
-3. **Summary & Confirm** — Recap findings
-4. **WOW Report** — Comprehensive report with inline visualizations
-5. **Pricing & CTA** — ~$300 pricing
-6. **Qualify + WA** — Urgency 1-10, employee count, revenue, WA link
+### 3. Activity Panel
+Real-time, game-like status panel during AI processing.
+- Desktop: right-side floating panel that collapses to a pill.
+- Mobile: bottom sheet with swipe-down-to-close and floating reopen handle.
+- Minion character walks, blinks, speeds up per stage, celebrates on success.
+- Progress bar acts as an "XP bar" filling with each stage.
+- Stages: `idle → thinking → searching → analyzing → crafting → success/error`.
 
-### 4. Admin Panel (`/#/admin`)
+### 4. Conversation Flow (7 Steps)
+1. **Pembukaan + Deep Research** — Greeting + data gathering + web research.
+2. **Diagnosa Awal + Validasi** — Confirm the main bottleneck with multiple choice.
+3. **Interview Mendalam** — Strategic questions.
+4. **Rekap Validasi** — Recap findings.
+5. **WOW Report** — Comprehensive report with inline visualizations.
+6. **Pricing & CTA** — ~$300 pricing.
+7. **Qualify + WA** — Urgency 1-10, employee count, revenue, WA link.
+
+### 5. Admin Panel (`/admin`)
 - Password: `jdp123`
 - AI Provider toggle (OpenAI <-> DeepSeek)
-- Model selection (gpt-4o/4.1/4.5/5, deepseek-chat/reasoner)
+- Model selection
 - Image generation toggle + style selector
 - Web search toggle + Tavily key
 - Step prompt editor (6 steps, editable per step)
@@ -122,48 +142,70 @@ AI responses end with `[CHOICE:option1|option2|option3]` tags.
 
 ## Important System Prompt
 
-The system prompt is constructed in `App.tsx` before sending to API:
-```
-You are Pesat AI Business Architect...
-[inline visualization instructions]
-ALWAYS end with [CHOICE:option1|option2|option3]
-```
+The system prompt is constructed in `App.tsx` before sending to the API:
+
+- For the **first user message**, it combines `MAIN_SYSTEM_PROMPT` + `STEP_1_FOCUS`.
+- For subsequent messages, it uses `MAIN_SYSTEM_PROMPT`.
+- Both are appended with inline visualization instructions, web search context, and the mandatory `[CHOICE:...]` instruction.
 
 ---
 
 ## Deployment
 
 ### VPS Details
-- IP: `94.100.26.189`
+- IP: `148.230.103.98`
 - User: `root`
-- Pass: `ymif5avvYc`
-- Web root: `/var/www/advisor/`
-- Backup: `/var/www/advisor-backup/`
+- Web root: `/var/lib/docker/volumes/pesat-control-plane_builds/_data/apps/advisor/`
 - Proxy script: `/var/www/advisor-proxy.js`
+- Proxy port: `3002`
+- Caddy config: `/opt/pesat-control-plane/caddy/Caddyfile`
+
+### Environment Variables
+The proxy reads API keys from environment variables. They are stored in:
+- `/var/www/advisor/.env` on the server (uploaded by `scripts/final-deploy.js`)
+- `.env` in the project root (gitignored)
+
+Required variables:
+```bash
+OPENAI_API_KEY=
+DEEPSEEK_API_KEY=
+TAVILY_API_KEY=
+```
 
 ### Deploy Steps
 ```bash
 npm run build
-# Copy dist/ to /var/www/advisor/
-# Restart proxy if needed
+node scripts/final-deploy.js
 ```
 
----
+The script will:
+1. Upload the proxy and `.env`.
+2. Start the proxy with PM2 (sourcing `.env`).
+3. Detect the Docker host IP and update the Caddy `/api/*` route.
+4. Validate and restart Caddy.
+5. Run quick health tests.
 
-## Quick Commands
-
+### Quick Commands
 ```bash
 # Build
-npm run build
+MSYS_NO_PATHCONV=1 VITE_BASE_PATH=/advisor/ npm run build
 
-# Test proxy
-curl http://94.100.26.189/api/health
+# Test local proxy
+node scripts/advisor-proxy.js
+curl http://localhost:3002/health
 
-# Restart proxy
-pkill -f advisor-proxy.js
-cd /var/www && nohup node advisor-proxy.js > /var/log/advisor-proxy.log 2>&1 &
+# Test remote health
+ssh -i C:/Users/User/.ssh/pesat_deploy_rsa root@148.230.103.98 "curl -s -H 'Host: apps.pesat.ai' http://localhost/api/health"
 ```
 
 ---
 
-*Last updated: 2026-07-06 (v5.3)*
+## Security Notes
+
+- **Never commit `.env` or API keys.** They are gitignored.
+- If you rotate any API key, update `.env` and re-run `scripts/final-deploy.js`.
+- The old `COLDSTART.md` had hardcoded credentials; they have been removed.
+
+---
+
+*Last updated: 2026-07-15 (v5.6.0)*
