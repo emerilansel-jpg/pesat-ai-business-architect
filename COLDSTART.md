@@ -216,4 +216,33 @@ ingress:
 
 ---
 
+## Session Log
+
+### 2026-07-15 — v5.6.0 Fixes + Deployment Cleanup
+
+- **Type:** CODING
+- **Status:** COMPLETED
+- **Files touched:**
+  - `src/contexts/ActivityContext.tsx` — added `currentStage` and `setStage`
+  - `src/components/ActivityPanel.tsx` — stage-based game mode, Quest Complete badge, XP bar
+  - `src/App.tsx` — stage transitions, AbortController timeout, first-message main-prompt combo
+  - `src/services/ai.ts` — `sendMessage` accepts optional `AbortSignal`
+  - `src/services/settings.ts` — `STEP_1_FOCUS`, removed default keys
+  - `scripts/advisor-proxy.js` — env-based API keys
+  - `scripts/deploy.js` — port 3002 health check
+  - `scripts/restart-proxy.js` — port 3002 health check
+  - `scripts/final-deploy.js` — upload `.env` and `dist/`, dynamic Docker host IP, Caddy validation
+  - `COLDSTART.md`, `VERSION.md`, `.env.example`, `.gitignore`
+- **Key decisions:**
+  - Moved API keys from source code to `.env` / environment variables.
+  - Created new Cloudflare tunnel in the correct `pesat.ai` account (`pesat-advisor-v3`) and set up systemd service.
+  - Deployment script now uploads `dist/` to the Caddy build volume instead of relying on stale assets.
+- **Blockers:** Local DNS resolver (router) did not yet pick up `apps.pesat.ai` during verification; public DNS (1.1.1.1) and direct edge IP test succeeded.
+- **Next step:** Wait for local DNS propagation or flush local DNS cache, then run browser end-to-end test if desired.
+- **Inspector:** PASSED (build, proxy health, external chat endpoint, external HTML)
+- **Backup location:** `backups/2026-07-15_1445_v5.5-fixes/`
+- **coldstart.md stored at:** `D:\Claude Cowork\Pesat ai business architect\pesat-ai-business-architect\COLDSTART.md`
+- **Browser used:** Edge via CDP (blocked by local DNS cache; not opened)
+
 *Last updated: 2026-07-15 (v5.6.0)*
+
