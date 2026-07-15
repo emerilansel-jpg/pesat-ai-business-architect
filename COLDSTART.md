@@ -159,6 +159,8 @@ The system prompt is constructed in `App.tsx` before sending to the API:
 - Proxy script: `/var/www/advisor-proxy.js`
 - Proxy port: `3002`
 - Caddy config: `/opt/pesat-control-plane/caddy/Caddyfile`
+- Cloudflare tunnel: `0f7602b7-07cf-4719-8e31-46f404b078c7` (`pesat-advisor-v3`)
+- Cloudflare tunnel service: `systemctl status cloudflared-tunnel`
 
 ### Environment Variables
 The proxy reads API keys from environment variables. They are stored in:
@@ -181,21 +183,27 @@ node scripts/final-deploy.js
 The script will:
 1. Upload the proxy and `.env`.
 2. Start the proxy with PM2 (sourcing `.env`).
-3. Detect the Docker host IP and update the Caddy `/api/*` route.
-4. Validate and restart Caddy.
-5. Run quick health tests.
+3. Upload `dist/` to the Caddy build volume (`/var/lib/docker/volumes/pesat-control-plane_builds/_data/apps/advisor/`).
+4. Copy `index.html` to the `apps/` root.
+5. Detect the Docker host IP and update the Caddy `/api/*` route.
+6. Validate and restart Caddy.
+7. Run quick health tests.
 
-### Quick Commands
+### Cloudflare Tunnel
+A systemd service keeps the tunnel alive:
 ```bash
-# Build
-MSYS_NO_PATHCONV=1 VITE_BASE_PATH=/advisor/ npm run build
+systemctl restart cloudflared-tunnel
+systemctl status cloudflared-tunnel
+```
 
-# Test local proxy
-node scripts/advisor-proxy.js
-curl http://localhost:3002/health
-
-# Test remote health
-ssh -i C:/Users/User/.ssh/pesat_deploy_rsa root@148.230.103.98 "curl -s -H 'Host: apps.pesat.ai' http://localhost/api/health"
+The tunnel config is at `/root/.cloudflared/config.yml`:
+```yaml
+tunnel: 0f7602b7-07cf-4719-8e31-46f404b078c7
+credentials-file: /root/.cloudflared/0f7602b7-07cf-4719-8e31-46f404b078c7.json
+ingress:
+  - hostname: apps.pesat.ai
+    service: http://127.0.0.1:80
+  - service: http_status:404
 ```
 
 ---
