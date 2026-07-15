@@ -34,6 +34,18 @@ async function deploy() {
     "bash -c 'set -a; source /var/www/advisor/.env; set +a; pm2 delete advisor-proxy 2>/dev/null || true; pm2 start /var/www/advisor-proxy.js --name advisor-proxy; pm2 save'"
   );
 
+  // 3. Upload dist/ to the Caddy build volume
+  const LOCAL_DIST = 'D:/Claude Cowork/Pesat ai business architect/pesat-ai-business-architect/dist';
+  const REMOTE_BUILD_DIR = '/var/lib/docker/volumes/pesat-control-plane_builds/_data/apps/advisor';
+  console.log('Uploading dist to', REMOTE_BUILD_DIR, '...');
+  if (!fs.existsSync(LOCAL_DIST)) {
+    throw new Error(`dist folder not found at ${LOCAL_DIST}. Run npm run build first.`);
+  }
+  await ssh.putDirectory(LOCAL_DIST, REMOTE_BUILD_DIR, {
+    recursive: true,
+    concurrency: 10,
+  });
+
   // 4. Replace placeholder index.html with app index.html
   console.log('Replacing placeholder index.html...');
   await ssh.execCommand('cp /var/lib/docker/volumes/pesat-control-plane_builds/_data/apps/advisor/index.html /var/lib/docker/volumes/pesat-control-plane_builds/_data/apps/index.html');
@@ -41,9 +53,9 @@ async function deploy() {
   // 5. Update Caddy config to reverse proxy /api to host:3002
   console.log('Detecting Docker host IP...');
   const ipResult = await ssh.execCommand(
-    'docker exec pesat-control-plane-caddy-1 sh -c "ip route | awk \'\/default\/ {print $3}\'"'
+    "docker exec pesat-control-plane-caddy-1 ip route | awk '/default/ {print $3}'"
   );
-  const hostIp = ipResult.stdout.trim() || '172.20.0.1';
+  const hostIp = ipResult.stdout.trim().split('/')[0].split(' ')[0] || '172.20.0.1';
   console.log('Using host IP:', hostIp);
 
   console.log('Updating Caddy config...');
