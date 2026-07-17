@@ -144,4 +144,76 @@
       transform: translateY(0) translateX(0);
     }
   }
+
+  /* Utility gradients & status */
+  .accent-gradient {
+    background: linear-gradient(135deg, #7C3AED, #8B5CF6);
+  }
+  .bg-status-online {
+    background-color: #22C55E;
+  }
+  .border-bg-primary {
+    border-color: #0B0F1A;
+  }
+
+  /* Typing indicator dots */
+  .animate-dot-bounce {
+    animation: dot-bounce 1.4s infinite ease-in-out both;
+  }
+  .animate-dot-bounce-delayed {
+    animation: dot-bounce 1.4s infinite ease-in-out both;
+    animation-delay: 0.16s;
+  }
+  .animate-dot-bounce-delayed-2 {
+    animation: dot-bounce 1.4s infinite ease-in-out both;
+    animation-delay: 0.32s;
+  }
+  @keyframes dot-bounce {
+    0%, 80%, 100% { transform: scale(0.6); opacity: 0.4; }
+    40% { transform: scale(1); opacity: 1; }
+  }
+
+  /* Avatar glow & online pulse */
+  .animate-avatar-glow {
+    animation: avatar-glow 2s ease-in-out infinite;
+  }
+  @keyframes avatar-glow {
+    0%, 100% { box-shadow: 0 0 0 0 rgba(124, 58, 237, 0.45); }
+    50% { box-shadow: 0 0 0 10px rgba(124, 58, 237, 0); }
+  }
+  .animate-pulse-online {
+    animation: pulse-online 2s cubic-bezier(0.4, 0, 0.6, 1) infinite;
+  }
+  @keyframes pulse-online {
+    0%, 100% { opacity: 1; }
+    50% { opacity: 0.5; }
+  }
+
+  /* Mobile markdown overrides (light theme) */
+  @media (max-width: 1023px) {
+    .markdown-body h2,
+    .markdown-body h3,
+    .markdown-body strong {
+      color: #111827;
+    }
+    .markdown-body ul > li::marker {
+      color: #7C3AED;
+    }
+    .markdown-body table th {
+      background: rgba(124, 58, 237, 0.1);
+      color: #111827;
+      border-color: rgba(124, 58, 237, 0.2);
+    }
+    .markdown-body table td {
+      color: #374151;
+      border-color: rgba(124, 58, 237, 0.15);
+    }
+    .markdown-body tr:nth-child(even) {
+      background: rgba(124, 58, 237, 0.03);
+    }
+    .markdown-body code {
+      background: #F3F4F6;
+      color: #7C3AED;
+    }
+  }
 }

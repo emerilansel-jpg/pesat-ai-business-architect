@@ -17,7 +17,7 @@ const ScrollToBottom = memo(function ScrollToBottom({ visible, onClick }: Scroll
           exit={{ opacity: 0, y: 10 }}
           transition={{ duration: 0.2 }}
           onClick={onClick}
-          className="absolute bottom-4 left-1/2 -translate-x-1/2 z-10 flex items-center gap-2 px-4 py-2 bg-bg-tertiary border border-[rgba(124,58,237,0.2)] rounded-[20px] text-xs font-medium text-text-secondary hover:bg-[#232A45] transition-colors duration-200"
+          className="absolute bottom-4 left-1/2 -translate-x-1/2 z-10 flex items-center gap-2 px-4 py-2 bg-white border border-slate-200 rounded-[20px] text-xs font-medium text-slate-600 shadow-sm hover:bg-slate-50 transition-colors duration-200 lg:bg-bg-tertiary lg:border-[rgba(124,58,237,0.2)] lg:text-text-secondary lg:hover:bg-[#232A45]"
         >
           <ArrowDown className="w-3.5 h-3.5" />
           Scroll to bottom

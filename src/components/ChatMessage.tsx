@@ -206,7 +206,7 @@ const ChatMessage = memo(function ChatMessage({
         initial={{ opacity: 0, y: 25, scale: 0.97 }}
         animate={{ opacity: 1, y: 0, scale: 1 }}
         transition={{ duration: 0.4, ease: easeOutExpo }}
-        className="flex items-start gap-2.5 md:gap-3 w-full"
+        className="flex items-start gap-2 md:gap-3 w-full group"
         onMouseEnter={() => setShowActions(true)}
         onMouseLeave={() => setShowActions(false)}
       >
@@ -216,14 +216,14 @@ const ChatMessage = memo(function ChatMessage({
 
         <div className="flex flex-col gap-1 min-w-0 flex-1 max-w-[85%] md:max-w-[80%]">
           {/* Message bubble */}
-          <div className="bg-[#1A1F35]/80 backdrop-blur-[12px] border-l-[3px] border-[#7C3AED] rounded-[4px_16px_16px_16px] px-4 py-3 shadow-[0_1px_2px_rgba(0,0,0,0.3)]">
+          <div className="bg-[#F2F2F7] text-slate-900 backdrop-blur-[12px] border-l-0 rounded-[18px_18px_18px_4px] px-4 py-3 shadow-sm lg:bg-[#1A1F35]/80 lg:text-[#CBD5E1] lg:border-l-[3px] lg:border-[#7C3AED] lg:rounded-[4px_16px_16px_16px] lg:shadow-[0_1px_2px_rgba(0,0,0,0.3)]">
             {/* Render segments: text (markdown) and images (inline) */}
             {segments.map((seg, segIdx) => {
               if (seg.type === 'text') {
                 return (
                   <div
                     key={segIdx}
-                    className="markdown-body text-[14px] md:text-[15px] text-[#CBD5E1] leading-relaxed"
+                    className="markdown-body text-[14px] md:text-[15px] text-slate-900 leading-relaxed lg:text-[#CBD5E1]"
                     dangerouslySetInnerHTML={{
                       __html: marked.parse(seg.content) as string,
                     }}
@@ -240,19 +240,19 @@ const ChatMessage = memo(function ChatMessage({
               return (
                 <div
                   key={segIdx}
-                  className="my-4 rounded-xl overflow-hidden border border-[rgba(124,58,237,0.2)] bg-[#0B0F1A]"
+                  className="my-4 rounded-xl overflow-hidden border border-slate-200 bg-white lg:border-[rgba(124,58,237,0.2)] lg:bg-[#0B0F1A]"
                 >
                   {/* Manual generate prompt */}
                   {isManualReady && (
-                    <div className="w-full aspect-square flex flex-col items-center justify-center gap-3 px-6 text-center bg-gradient-to-br from-[#111827] to-[#0B0F1A]">
+                    <div className="w-full aspect-square flex flex-col items-center justify-center gap-3 px-6 text-center bg-slate-50 lg:from-[#111827] lg:to-[#0B0F1A] lg:bg-gradient-to-br">
                       <div className="w-12 h-12 rounded-full bg-[rgba(124,58,237,0.12)] flex items-center justify-center">
                         <Wand2 className="w-6 h-6 text-[#7C3AED]" />
                       </div>
                       <div>
-                        <p className="text-[14px] font-medium text-[#F8FAFC] mb-1">
+                        <p className="text-[14px] font-medium text-slate-900 mb-1 lg:text-[#F8FAFC]">
                           Visualisasi AI siap dibuat
                         </p>
-                        <p className="text-[12px] text-[#94A3B8] leading-relaxed">
+                        <p className="text-[12px] text-slate-500 leading-relaxed lg:text-[#94A3B8]">
                           {seg.description.substring(0, 90)}
                           {seg.description.length > 90 ? '...' : ''}
                         </p>
@@ -264,7 +264,7 @@ const ChatMessage = memo(function ChatMessage({
                         <Wand2 className="w-3.5 h-3.5" />
                         Generate visual
                       </button>
-                      <span className="text-[11px] text-[#64748B]">
+                      <span className="text-[11px] text-slate-400 lg:text-[#64748B]">
                         ±15–30 detik
                       </span>
                     </div>
@@ -272,9 +272,9 @@ const ChatMessage = memo(function ChatMessage({
 
                   {/* Loading state */}
                   {isGenerating && (
-                    <div className="w-full aspect-square flex flex-col items-center justify-center gap-2 bg-gradient-to-br from-[#111827] to-[#0B0F1A]">
+                    <div className="w-full aspect-square flex flex-col items-center justify-center gap-2 bg-slate-50 lg:bg-gradient-to-br lg:from-[#111827] lg:to-[#0B0F1A]">
                       <Loader2 className="w-8 h-8 text-[#7C3AED] animate-spin" />
-                      <span className="text-[11px] text-[#64748B]">
+                      <span className="text-[11px] text-slate-400 lg:text-[#64748B]">
                         Membuat visual... (±15–30 detik)
                       </span>
                     </div>
@@ -282,9 +282,9 @@ const ChatMessage = memo(function ChatMessage({
 
                   {/* Error state */}
                   {hasError && (
-                    <div className="w-full aspect-square flex flex-col items-center justify-center gap-2 bg-[#111827]">
+                    <div className="w-full aspect-square flex flex-col items-center justify-center gap-2 bg-slate-50 lg:bg-[#111827]">
                       <ImageOff className="w-6 h-6 text-[#64748B]" />
-                      <span className="text-[11px] text-[#64748B]">Gagal memuat gambar</span>
+                      <span className="text-[11px] text-slate-500 lg:text-[#64748B]">Gagal memuat gambar</span>
                       <button
                         onClick={() => {
                           setImageError((prev) => ({ ...prev, [segIdx]: false }));
@@ -317,8 +317,8 @@ const ChatMessage = memo(function ChatMessage({
                   )}
 
                   {/* Caption bar */}
-                  <div className="flex items-center justify-between px-3 py-2 bg-[#111827]">
-                    <span className="text-[11px] text-[#64748B] truncate max-w-[260px]">
+                  <div className="flex items-center justify-between px-3 py-2 bg-slate-50 lg:bg-[#111827]">
+                    <span className="text-[11px] text-slate-500 lg:text-[#64748B] truncate max-w-[260px]">
                       {seg.description.substring(0, 60)}...
                     </span>
                   </div>
@@ -332,7 +332,7 @@ const ChatMessage = memo(function ChatMessage({
                 <p className="text-[11px] font-medium text-[#64748B] uppercase tracking-wider mb-2.5">
                   Pilih jawaban:
                 </p>
-                <div className="flex flex-wrap gap-2.5">
+                <div className="flex flex-col lg:flex-row lg:flex-wrap gap-2.5">
                   {displayChoices.map((choice, i) => (
                     <motion.button
                       key={i}
@@ -344,7 +344,7 @@ const ChatMessage = memo(function ChatMessage({
                         ease: easeOutExpo,
                       }}
                       onClick={() => onChoiceClick(choice)}
-                      className="px-5 py-3.5 min-h-[52px] bg-gradient-to-r from-[rgba(124,58,237,0.15)] to-[rgba(139,92,246,0.1)] border-2 border-[rgba(124,58,237,0.4)] rounded-xl text-[14px] font-semibold text-[#F8FAFC] shadow-[0_2px_8px_rgba(124,58,237,0.15)] hover:bg-gradient-to-r hover:from-[#7C3AED] hover:to-[#8B5CF6] hover:border-[#7C3AED] hover:shadow-[0_4px_20px_rgba(124,58,237,0.4)] hover:text-white active:scale-[0.95] transition-all duration-200 cursor-pointer select-none touch-manipulation"
+                      className="w-full lg:w-auto lg:flex-1 px-4 py-3 min-h-[48px] bg-white border border-slate-200 rounded-xl text-[14px] font-medium text-slate-900 shadow-sm hover:bg-slate-50 hover:border-slate-300 active:scale-[0.95] transition-all duration-200 cursor-pointer select-none touch-manipulation lg:px-5 lg:py-3.5 lg:min-h-[52px] lg:bg-gradient-to-r lg:from-[rgba(124,58,237,0.15)] lg:to-[rgba(139,92,246,0.1)] lg:border-2 lg:border-[rgba(124,58,237,0.4)] lg:font-semibold lg:text-[#F8FAFC] lg:shadow-[0_2px_8px_rgba(124,58,237,0.15)] lg:hover:bg-gradient-to-r lg:hover:from-[#7C3AED] lg:hover:to-[#8B5CF6] lg:hover:border-[#7C3AED] lg:hover:shadow-[0_4px_20px_rgba(124,58,237,0.4)] lg:hover:text-white"
                     >
                       {choice}
                     </motion.button>
@@ -359,7 +359,7 @@ const ChatMessage = memo(function ChatMessage({
                       ease: easeOutExpo,
                     }}
                     onClick={() => onChoiceClick('Lainnya...')}
-                    className="px-5 py-3.5 min-h-[52px] bg-[rgba(124,58,237,0.05)] border-2 border-[rgba(124,58,237,0.2)] border-dashed rounded-xl text-[14px] font-medium text-[#A78BFA] hover:bg-[rgba(124,58,237,0.15)] hover:border-[rgba(124,58,237,0.5)] active:scale-[0.95] transition-all duration-200 cursor-pointer select-none touch-manipulation"
+                    className="w-full lg:w-auto lg:flex-1 px-4 py-3 min-h-[48px] bg-slate-50 border border-slate-200 border-dashed rounded-xl text-[14px] font-medium text-slate-600 hover:bg-slate-100 hover:border-slate-300 active:scale-[0.95] transition-all duration-200 cursor-pointer select-none touch-manipulation lg:px-5 lg:py-3.5 lg:min-h-[52px] lg:bg-[rgba(124,58,237,0.05)] lg:border-2 lg:border-[rgba(124,58,237,0.2)] lg:font-medium lg:text-[#A78BFA] lg:hover:bg-[rgba(124,58,237,0.15)] lg:hover:border-[rgba(124,58,237,0.5)]"
                   >
                     Lainnya... (ketik sendiri)
                   </motion.button>
@@ -370,17 +370,17 @@ const ChatMessage = memo(function ChatMessage({
 
           {/* Action buttons + timestamp */}
           <div className="flex items-center justify-between ml-1 mt-1">
-            <span className="text-[11px] text-[#64748B]">
+            <span className="text-[11px] text-slate-500 lg:text-[#64748B]">
               {formatTime(message.timestamp)}
             </span>
             <div
               className={`flex items-center gap-1 transition-opacity duration-200 ${
-                showActions ? 'opacity-100' : 'opacity-0 md:opacity-0'
+                showActions ? 'opacity-100' : 'opacity-100 lg:opacity-0 lg:group-hover:opacity-100'
               }`}
             >
               <button
                 onClick={handleCopy}
-                className="flex items-center gap-1 px-2 py-1 rounded-md text-[11px] text-[#64748B] hover:text-[#CBD5E1] hover:bg-[rgba(124,58,237,0.1)] transition-colors"
+                className="flex items-center gap-1 px-2.5 py-1.5 rounded-lg text-[11px] text-slate-500 hover:text-slate-900 hover:bg-slate-100 transition-colors lg:text-[#64748B] lg:hover:text-[#CBD5E1] lg:hover:bg-[rgba(124,58,237,0.1)]"
               >
                 {copied ? (
                   <Check className="w-3 h-3" />
@@ -392,7 +392,7 @@ const ChatMessage = memo(function ChatMessage({
               {isLastAI && onRetry && (
                 <button
                   onClick={onRetry}
-                  className="flex items-center gap-1 px-2 py-1 rounded-md text-[11px] text-[#64748B] hover:text-[#CBD5E1] hover:bg-[rgba(124,58,237,0.1)] transition-colors"
+                  className="flex items-center gap-1 px-2.5 py-1.5 rounded-lg text-[11px] text-slate-500 hover:text-slate-900 hover:bg-slate-100 transition-colors lg:text-[#64748B] lg:hover:text-[#CBD5E1] lg:hover:bg-[rgba(124,58,237,0.1)]"
                 >
                   <RefreshCw className="w-3 h-3" />
                   Retry
@@ -417,12 +417,12 @@ const ChatMessage = memo(function ChatMessage({
         <span className="text-xs font-semibold text-white">U</span>
       </div>
       <div className="flex flex-col gap-1 min-w-0 items-end max-w-[85%] md:max-w-[80%]">
-        <div className="bg-gradient-to-br from-[#7C3AED] to-[#8B5CF6] rounded-[16px_16px_4px_16px] px-4 py-3 shadow-[0_4px_16px_rgba(124,58,237,0.25)]">
+        <div className="bg-gradient-to-br from-[#7C3AED] to-[#8B5CF6] rounded-[18px_18px_4px_18px] px-4 py-3 shadow-[0_2px_8px_rgba(124,58,237,0.18)] lg:shadow-[0_4px_16px_rgba(124,58,237,0.25)]">
           <p className="text-[14px] md:text-[15px] text-white leading-relaxed whitespace-pre-wrap">
             {message.content}
           </p>
         </div>
-        <span className="text-[11px] text-[#64748B] mr-1">
+        <span className="text-[11px] text-slate-500 lg:text-[#64748B] mr-1">
           {formatTime(message.timestamp)}
         </span>
       </div>

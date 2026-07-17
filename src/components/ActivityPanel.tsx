@@ -1,16 +1,17 @@
-import { motion, AnimatePresence, type PanInfo } from 'framer-motion';
+import { motion, AnimatePresence, PanInfo } from 'framer-motion';
 import { useActivity, type ActivityItem, type ActivityIcon, type ActivityStage } from '../contexts/ActivityContext';
 import {
   Sparkles,
   X,
   ChevronUp,
-  Wand2,
   Trophy,
   Zap,
   Target,
   Rocket,
+  Loader2,
+  Minus,
 } from 'lucide-react';
-import { useState, useEffect, useCallback, useRef } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 
 const stageMeta: Record<
   ActivityIcon,
@@ -123,18 +124,16 @@ const funFacts = [
   'Tahukah anda? AI agent bisa kerja 24/7 tanpa ngantuk.',
 ];
 
-function useFunMessage(icon: ActivityIcon, isProcessing: boolean) {
+function useFunMessage(icon: ActivityIcon) {
   const [message, setMessage] = useState(() => {
     const list = funMessages[icon] || funMessages.thinking;
     return list[Math.floor(Math.random() * list.length)];
   });
 
   useEffect(() => {
-    if (isProcessing) {
-      const list = funMessages[icon] || funMessages.thinking;
-      setMessage(list[Math.floor(Math.random() * list.length)]);
-    }
-  }, [icon, isProcessing]);
+    const list = funMessages[icon] || funMessages.thinking;
+    setMessage(list[Math.floor(Math.random() * list.length)]);
+  }, [icon]);
 
   return message;
 }
@@ -444,24 +443,30 @@ function ProgressBar({ stage, isProcessing }: { stage: ActivityStage; isProcessi
 export default function ActivityPanel() {
   const { logs, isVisible, isProcessing, currentStage, clearLogs } = useActivity();
   const [desktopCollapsed, setDesktopCollapsed] = useState(false);
-  const [mobileOpen, setMobileOpen] = useState(true);
-  const [dragY, setDragY] = useState(0);
-  const mobileListRef = useRef<HTMLDivElement>(null);
+  const [mobileExpanded, setMobileExpanded] = useState(true);
   const [funFactIndex] = useState(() => Math.floor(Math.random() * funFacts.length));
 
   const currentLog = logs[logs.length - 1];
   const currentIcon = currentLog?.icon || 'thinking';
   const meta = stageMeta[currentIcon] || stageMeta.thinking;
-  const funMessage = useFunMessage(currentIcon, isProcessing);
+  const funMessage = useFunMessage(currentIcon);
 
   const currentLogId = currentLog?.id;
+  const progress = {
+    idle: 5,
+    thinking: 15,
+    searching: 35,
+    analyzing: 55,
+    crafting: 80,
+    success: 100,
+    error: 100,
+  }[currentStage];
 
   // Reset collapse states when a new processing cycle starts.
   useEffect(() => {
     if (isProcessing) {
       setDesktopCollapsed(false);
-      setMobileOpen(true);
-      setDragY(0);
+      setMobileExpanded(true);
     }
   }, [isProcessing]);
 
@@ -472,8 +477,7 @@ export default function ActivityPanel() {
       const t = window.setTimeout(() => {
         clearLogs();
         setDesktopCollapsed(false);
-        setMobileOpen(false);
-        setDragY(0);
+        setMobileExpanded(false);
       }, 7000);
       return () => clearTimeout(t);
     }
@@ -483,47 +487,29 @@ export default function ActivityPanel() {
   useEffect(() => {
     if (!isProcessing && logs.length === 0) {
       setDesktopCollapsed(false);
-      setMobileOpen(false);
-      setDragY(0);
+      setMobileExpanded(false);
     }
   }, [isProcessing, logs.length]);
 
-  const handleDragEnd = useCallback(
-    (_: unknown, info: PanInfo) => {
-      if (info.offset.y > 80 || info.velocity.y > 500) {
-        setMobileOpen(false);
-      }
-      setDragY(0);
-    },
-    []
-  );
-
   const openMobile = useCallback(() => {
-    if (isProcessing || logs.length > 0) setMobileOpen(true);
+    if (isProcessing || logs.length > 0) setMobileExpanded(true);
   }, [isProcessing, logs.length]);
 
-  if (!isVisible || logs.length === 0) {
-    return (
-      <AnimatePresence>
-        {!mobileOpen && (isProcessing || logs.length > 0) && (
-          <motion.button
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
-            exit={{ opacity: 0, y: 20 }}
-            transition={{ duration: 0.25 }}
-            onClick={openMobile}
-            className="lg:hidden fixed left-1/2 -translate-x-1/2 bottom-5 z-50 flex items-center gap-2 px-4 py-2.5 bg-[#0F1423]/95 backdrop-blur-[16px] border border-[rgba(124,58,237,0.3)] rounded-full shadow-[0_4px_16px_rgba(0,0,0,0.4)] pointer-events-auto"
-          >
-            <Wand2 className="w-3.5 h-3.5 text-[#7C3AED]" />
-            <span className="text-[12px] font-medium text-[#F8FAFC]">
-              Lagi kerja...
-            </span>
-            <ChevronUp className="w-3.5 h-3.5 text-[#64748B]" />
-          </motion.button>
-        )}
-      </AnimatePresence>
-    );
-  }
+  const closeMobile = useCallback(() => {
+    setMobileExpanded(false);
+  }, []);
+
+  const handleDragEnd = useCallback(
+    (_event: MouseEvent | TouchEvent | PointerEvent, info: PanInfo) => {
+      if (info.offset.y > 80 || info.velocity.y > 500) {
+        closeMobile();
+      }
+    },
+    [closeMobile]
+  );
+
+  // Keep the mobile mini bar visible while there are logs or processing is active.
+  const showMobile = isVisible || logs.length > 0 || isProcessing;
 
   return (
     <>
@@ -624,95 +610,141 @@ export default function ActivityPanel() {
         )}
       </AnimatePresence>
 
-      {/* Mobile Bottom Sheet */}
+      {/* Mobile Kimi-style Activity Sheet */}
       <AnimatePresence>
-        {mobileOpen && (
-          <motion.div
-            initial={{ y: '100%' }}
-            animate={{ y: dragY }}
-            exit={{ y: '100%' }}
-            transition={{
-              type: 'spring',
-              damping: 28,
-              stiffness: 280,
-            }}
-            drag="y"
-            dragConstraints={{ top: 0, bottom: 0 }}
-            dragElastic={0.15}
-            onDrag={(_, info) => setDragY(Math.max(0, info.offset.y))}
-            onDragEnd={handleDragEnd}
-            className="lg:hidden fixed left-0 right-0 bottom-0 z-50 pointer-events-auto"
-            style={{ height: '65vh', maxHeight: '520px' }}
-          >
-            <div
-              className={`h-full bg-gradient-to-br ${meta.gradient} backdrop-blur-[16px] border-t border-[rgba(124,58,237,0.2)] rounded-t-[24px] shadow-[0_-8px_32px_rgba(0,0,0,0.4)] flex flex-col bg-[#0F1423]/90`}
+        {showMobile && (
+          <>
+            {/* Expanded bottom sheet */}
+            <motion.div
+              key="mobile-sheet"
+              initial={{ y: '100%' }}
+              animate={{ y: mobileExpanded ? '0%' : '100%' }}
+              exit={{ y: '100%' }}
+              transition={{ type: 'spring', damping: 28, stiffness: 280 }}
+              drag="y"
+              dragConstraints={{ top: 0, bottom: 0 }}
+              dragElastic={0.2}
+              onDragEnd={handleDragEnd}
+              className="lg:hidden fixed left-0 right-0 bottom-0 z-[60] h-[70vh] pointer-events-auto"
             >
-              <div className="flex flex-col items-center pt-3 pb-2">
-                <div className="w-10 h-1 rounded-full bg-[rgba(124,58,237,0.4)] mb-3" />
-                <div className="flex items-center justify-between w-full px-4">
-                  <div className="flex items-center gap-2">
-                    <Sparkles className="w-4 h-4 text-[#7C3AED]" />
-                    <h3 className="text-[13px] font-semibold text-[#F8FAFC]">
-                      Pesat AI lagi kerja...
-                    </h3>
-                  </div>
-                  <button
-                    onClick={() => setMobileOpen(false)}
-                    className="p-1 rounded-md text-[#64748B] hover:text-[#CBD5E1] hover:bg-[rgba(124,58,237,0.1)] transition-colors"
-                    aria-label="Close activity panel"
-                  >
-                    <X className="w-3.5 h-3.5" />
-                  </button>
-                </div>
-              </div>
-              <div
-                ref={mobileListRef}
-                className="flex-1 overflow-y-auto p-4 scrollbar-chat"
-              >
-                <div className="flex flex-col items-center gap-2 mb-2">
-                  <MinionCharacter icon={currentIcon} stage={currentStage} isProcessing={isProcessing} />
-                  {isProcessing && <WalkingDots />}
-                  <p className="text-[14px] font-bold text-[#F8FAFC] text-center leading-tight px-2">
-                    {funMessage}
-                  </p>
-                  {currentStage === 'success' && (
-                    <motion.div
-                      initial={{ scale: 0, opacity: 0 }}
-                      animate={{ scale: 1, opacity: 1 }}
-                      transition={{ type: 'spring', stiffness: 300, damping: 20 }}
-                      className="px-3 py-1 rounded-full bg-gradient-to-r from-[#22C55E] to-[#3B82F6] text-white text-[11px] font-bold shadow-lg"
+              <div className="h-full bg-[#0F1423] rounded-t-[28px] shadow-[0_-8px_32px_rgba(0,0,0,0.35)] border-t border-[rgba(124,58,237,0.25)] flex flex-col overflow-hidden">
+                {/* Drag handle */}
+                <div className="flex flex-col items-center pt-3 pb-2 px-4 border-b border-[rgba(124,58,237,0.12)]">
+                  <div className="w-12 h-1.5 rounded-full bg-[rgba(255,255,255,0.15)] mb-3" />
+                  <div className="w-full flex items-center justify-between">
+                    <div className="flex items-center gap-2">
+                      <Sparkles className="w-4 h-4 text-[#7C3AED]" />
+                      <h3 className="text-[14px] font-semibold text-[#F8FAFC]">
+                        Pesat AI lagi kerja...
+                      </h3>
+                    </div>
+                    <button
+                      onClick={closeMobile}
+                      className="p-2 rounded-full text-[#64748B] hover:text-[#CBD5E1] hover:bg-[rgba(124,58,237,0.1)] transition-colors"
+                      aria-label="Close activity panel"
                     >
-                      🏆 Quest Complete!
+                      <Minus className="w-4 h-4" />
+                    </button>
+                  </div>
+                </div>
+
+                {/* Sheet content */}
+                <div className="flex-1 overflow-y-auto p-4 scrollbar-chat">
+                  <div className="flex flex-col items-center gap-3 mb-4">
+                    <MinionCharacter icon={currentIcon} stage={currentStage} isProcessing={isProcessing} />
+                    {isProcessing && <WalkingDots />}
+                    <p className="text-[16px] font-bold text-[#F8FAFC] text-center leading-tight px-6">
+                      {funMessage}
+                    </p>
+                    {currentStage === 'success' && (
+                      <motion.div
+                        initial={{ scale: 0, opacity: 0 }}
+                        animate={{ scale: 1, opacity: 1 }}
+                        transition={{ type: 'spring', stiffness: 300, damping: 20 }}
+                        className="px-4 py-1.5 rounded-full bg-gradient-to-r from-[#22C55E] to-[#3B82F6] text-white text-[12px] font-bold shadow-lg"
+                      >
+                        🏆 Quest Complete!
+                      </motion.div>
+                    )}
+                  </div>
+
+                  <ProgressBar stage={currentStage} isProcessing={isProcessing} />
+
+                  <div className="flex flex-col mt-4">
+                    {logs.map((log) => (
+                      <ActivityLogItem
+                        key={log.id}
+                        log={log}
+                        isCurrent={log.id === currentLogId}
+                      />
+                    ))}
+                  </div>
+
+                  {!isProcessing && logs.length > 0 && (
+                    <motion.div
+                      initial={{ opacity: 0, y: 10 }}
+                      animate={{ opacity: 1, y: 0 }}
+                      className="mt-5 p-4 rounded-xl bg-[rgba(124,58,237,0.08)] border border-[rgba(124,58,237,0.15)]"
+                    >
+                      <p className="text-[12px] text-[#94A3B8] leading-relaxed">
+                        {funFacts[funFactIndex]}
+                      </p>
                     </motion.div>
                   )}
                 </div>
-
-                <ProgressBar stage={currentStage} isProcessing={isProcessing} />
-
-                <div className="flex flex-col mt-3">
-                  {logs.map((log) => (
-                    <ActivityLogItem
-                      key={log.id}
-                      log={log}
-                      isCurrent={log.id === currentLogId}
-                    />
-                  ))}
-                </div>
-
-                {!isProcessing && logs.length > 0 && (
-                  <motion.div
-                    initial={{ opacity: 0, y: 10 }}
-                    animate={{ opacity: 1, y: 0 }}
-                    className="mt-4 p-3 rounded-xl bg-[rgba(124,58,237,0.08)] border border-[rgba(124,58,237,0.15)]"
-                  >
-                    <p className="text-[11px] text-[#94A3B8] leading-relaxed">
-                      {funFacts[funFactIndex]}
-                    </p>
-                  </motion.div>
-                )}
               </div>
-            </div>
-          </motion.div>
+            </motion.div>
+
+            {/* Backdrop for expanded sheet */}
+            <AnimatePresence>
+              {mobileExpanded && (
+                <motion.div
+                  initial={{ opacity: 0 }}
+                  animate={{ opacity: 1 }}
+                  exit={{ opacity: 0 }}
+                  transition={{ duration: 0.2 }}
+                  className="lg:hidden fixed inset-0 z-[55] bg-black/30 pointer-events-none"
+                />
+              )}
+            </AnimatePresence>
+
+            {/* Collapsed mini bar */}
+            {!mobileExpanded && (
+              <motion.button
+                key="mobile-mini-bar"
+                initial={{ opacity: 0, y: 20 }}
+                animate={{ opacity: 1, y: 0 }}
+                exit={{ opacity: 0, y: 20 }}
+                transition={{ duration: 0.25 }}
+                onClick={openMobile}
+                className="lg:hidden fixed left-1/2 -translate-x-1/2 bottom-[88px] z-[65] w-[92%] max-w-md flex items-center gap-3 px-4 py-3 bg-[#0F1423]/95 backdrop-blur-[16px] border border-[rgba(124,58,237,0.3)] rounded-2xl shadow-[0_4px_20px_rgba(0,0,0,0.4)] pointer-events-auto"
+              >
+                <div className="w-9 h-9 flex items-center justify-center flex-shrink-0 rounded-full bg-gradient-to-br from-[#7C3AED]/20 to-[#3B82F6]/10">
+                  {currentStage === 'success' ? (
+                    <span className="text-lg">🎉</span>
+                  ) : currentStage === 'error' ? (
+                    <span className="text-lg">⚠️</span>
+                  ) : (
+                    <Loader2 className="w-5 h-5 text-[#7C3AED] animate-spin" />
+                  )}
+                </div>
+                <div className="flex-1 min-w-0 text-left">
+                  <p className="text-[13px] font-bold text-[#F8FAFC] leading-tight truncate">
+                    {funMessage}
+                  </p>
+                  <p className="text-[11px] text-[#94A3B8] mt-0.5">
+                    {meta.label} • {progress}%
+                  </p>
+                </div>
+                <div className="flex-shrink-0">
+                  <div className="w-8 h-8 rounded-full bg-[rgba(124,58,237,0.15)] flex items-center justify-center">
+                    <ChevronUp className="w-4 h-4 text-[#7C3AED]" />
+                  </div>
+                </div>
+                <div className="absolute left-1/2 -translate-x-1/2 -top-1.5 w-10 h-1 rounded-full bg-[rgba(255,255,255,0.2)]" />
+              </motion.button>
+            )}
+          </>
         )}
       </AnimatePresence>
     </>

@@ -27,7 +27,8 @@ const BASE_PERSONA =
 
 const BASE_GUIDELINE_STYLES =
   '## GUIDELINE STYLES\n' +
-  '- Selalu ikuti bahasa yang dipakai user. Indonesia → Bahasa Indonesia; English → English; campur → natural campur.\n' +
+  '- Bahasa default adalah Bahasa Indonesia. Balas dalam Bahasa Indonesia kecuali user jelas-jelas menulis pesannya dalam English.\n' +
+  '- Selalu ikuti bahasa yang dipakai user. Indonesia → Bahasa Indonesia; English → English; campur → natural campur dengan prioritas Indonesia.\n' +
   '- Gaya bahasa: mudah dimengerti, casual tapi sopan, conversational, cerdas, tanpa fluff.\n' +
   '- Gunakan kata "saya" untuk mewakili http://pesat.ai dan kata "anda" untuk user.\n' +
   '- Terdengar seperti business advisor + AI architect: tajam, smart, observatif, bisa "membaca bisnis".\n' +
@@ -188,7 +189,7 @@ export const DEFAULT_SETTINGS: AdvisorSettings = {
   maxImagesPerResponse: 1,
   webSearchEnabled: true,
   stepPrompts: [...DEFAULT_STEP_PROMPTS],
-  promptVersion: 2,
+  promptVersion: 3,
 };
 
 export function loadSettings(): AdvisorSettings {

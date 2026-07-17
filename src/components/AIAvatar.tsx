@@ -22,7 +22,7 @@ const AIAvatar = memo(function AIAvatar({ size = 'md', isTyping = false }: AIAva
       </div>
       {/* Online dot */}
       <div
-        className={`absolute ${dotPosition} ${dotSize} rounded-full bg-status-online border-2 border-bg-primary animate-pulse-online`}
+        className={`absolute ${dotPosition} ${dotSize} rounded-full bg-status-online border-2 border-white animate-pulse-online`}
       />
     </div>
   );

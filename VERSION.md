@@ -1,5 +1,73 @@
 # Version History
 
+## v5.7.0 — 2026-07-17
+- Type: Feature / Bug Fix
+- Changes:
+  - Redesigned mobile ActivityPanel into a Kimi agent-style bottom sheet that slides up to 70% of the screen.
+  - Added a drag handle at the top of the mobile sheet; users can drag it down to collapse.
+  - When collapsed, a persistent mini horizontal bar floats above the input bar and reopens the sheet on tap.
+  - Fixed ActivityPanel status bug where the message could still read like an active processing step after the AI finished; fun message now follows the current icon/stage correctly.
+  - Strengthened language default: Bahasa Indonesia is the default; English is used only when the user clearly writes in English.
+  - Added a focused first-message instruction so the opening response follows the main prompt and asks for business details naturally.
+  - Bumped prompt version to auto-reset cached step prompts in localStorage.
+- Files touched:
+  - `src/components/ActivityPanel.tsx`
+  - `src/contexts/ActivityContext.tsx`
+  - `src/App.tsx`
+  - `src/services/settings.ts`
+  - `src/services/mainPrompt.ts`
+  - `package.json`
+  - `VERSION.md`
+- Breaking: no
+
+
+## v5.6.2 — 2026-07-17
+- Type: Bug Fix / UI Polish
+- Changes:
+  - Refined mobile chat to feel closer to Kimi agents app: softer avatar glow, cleaner navbar, rounder message bubbles, and lighter user bubble shadow.
+  - Mobile choice buttons now stack full-width instead of wrapping into a grid, matching native mobile chat patterns.
+  - Improved touch targets for Copy/Retry actions and made the input bar more pill-shaped on mobile.
+  - Replaced the distorted scaled-minion ActivityPanel mobile indicator with a clean spinner/icon badge.
+  - Reduced mobile chat spacing and padding for a denser, more app-like feel.
+- Files touched:
+  - `src/components/WelcomeScreen.tsx`
+  - `src/components/Navbar.tsx`
+  - `src/components/ChatMessage.tsx`
+  - `src/components/InputBar.tsx`
+  - `src/components/ActivityPanel.tsx`
+  - `src/components/ChatArea.tsx`
+  - `src/components/TypingIndicator.tsx`
+  - `package.json`
+  - `VERSION.md`
+- Breaking: no
+
+
+## v5.6.1 — 2026-07-16
+- Type: Bug Fix / UI Polish
+- Changes:
+  - Redesigned mobile view to look and feel like a native mobile chat app (Kimi-style).
+  - Mobile now uses a light theme: white background, light gray AI bubbles, and a floating rounded input bar.
+  - Replaced the large mobile ActivityPanel bottom sheet with a compact floating status card above the input.
+  - Kept the dark desktop experience unchanged.
+  - Added missing CSS utilities for AI avatar glow, online pulse, and typing dot animations.
+  - Fixed AI message text color on mobile so it remains readable against the light bubble.
+- Files touched:
+  - `src/index.css`
+  - `src/App.tsx`
+  - `src/components/Navbar.tsx`
+  - `src/components/ChatArea.tsx`
+  - `src/components/ChatMessage.tsx`
+  - `src/components/InputBar.tsx`
+  - `src/components/TypingIndicator.tsx`
+  - `src/components/ScrollToBottom.tsx`
+  - `src/components/WelcomeScreen.tsx`
+  - `src/components/ActivityPanel.tsx`
+  - `src/components/AIAvatar.tsx`
+  - `package.json`
+  - `VERSION.md`
+- Breaking: no
+
+
 ## v5.6.0 — 2026-07-15
 - Type: Feature / Bug Fix / Deployment Cleanup
 - Changes:

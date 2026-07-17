@@ -33,6 +33,9 @@ const ACTIVITY = {
   error: 'Ups, ada error. Coba lagi ya 😅',
 };
 
+const FIRST_MESSAGE_FOCUS = `\n\n## FOKUS PESAN PERTAMA (WAJIB)\nIni adalah pesan pertama dari user. JANGAN langsung kasih solusi final. JANGAN berpanjang-panjang. Pilih salah satu:\n1. Jika user sudah sebutkan nama brand/bisnis: sapa, konfirmasi akan riset, lalu mulai riset ringkas dan berikan impression awal yang tajam.\n2. Jika user belum sebutkan brand/bisnis: sapa dengan ramah, jelaskan anda akan bantu baca bisnisnya, lalu minta nama brand, website, Instagram/TikTok/marketplace/LinkedIn, industri, dan produk/jasa utama.\n\nPanjang maksimal 3-4 paragraf pendek. Jangan pernah melebihi 4 paragraf di pesan pertama. Akhiri dengan [CHOICE:...] sesuai format instruksi.`;
+
+
 function ChatInterface() {
   const [messages, setMessages] = useState<Message[]>([]);
   const [showWelcome, setShowWelcome] = useState(true);
@@ -141,6 +144,7 @@ function ChatInterface() {
           ? MAIN_SYSTEM_PROMPT +
             '\n\n' +
             STEP_1_FOCUS +
+            FIRST_MESSAGE_FOCUS +
             (inlineVizPrompt || '') +
             searchContext +
             choicePrompt
@@ -239,7 +243,7 @@ function ChatInterface() {
   }, [messages, isTyping]);
 
   return (
-    <div className="h-screen flex flex-col bg-[#0B0F1A] overflow-hidden">
+    <div className="h-screen flex flex-col bg-[#0B0F1A] overflow-hidden max-lg:bg-white max-lg:text-slate-900">
       {/* Navbar */}
       <Navbar />
 

@@ -1,7 +1,7 @@
 {
   "name": "pesat-ai-business-architect",
   "private": true,
-  "version": "5.5.0",
+  "version": "5.7.0",
   "type": "module",
   "scripts": {
     "dev": "concurrently \"npm run dev:server\" \"vite\"",

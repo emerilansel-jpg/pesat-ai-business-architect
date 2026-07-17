@@ -20,7 +20,7 @@ const WelcomeScreen = memo(function WelcomeScreen() {
   return (
     <div className="flex flex-col items-center justify-center h-full gap-5 px-4 relative overflow-hidden">
       {/* Ambient floating particles */}
-      <div className="absolute inset-0 pointer-events-none overflow-hidden">
+      <div className="absolute inset-0 pointer-events-none overflow-hidden hidden lg:block">
         {particles.map((p) => (
           <div
             key={p.id}
@@ -49,7 +49,7 @@ const WelcomeScreen = memo(function WelcomeScreen() {
         initial={{ opacity: 0 }}
         animate={{ opacity: 1 }}
         transition={{ duration: 1 }}
-        className="absolute inset-0 pointer-events-none"
+        className="absolute inset-0 pointer-events-none hidden lg:block"
         style={{
           background:
             'linear-gradient(180deg, rgba(124,58,237,0.08) 0%, rgba(15,23,42,0) 50%)',
@@ -62,7 +62,7 @@ const WelcomeScreen = memo(function WelcomeScreen() {
         animate={{ scale: 1, opacity: 1 }}
         transition={{ type: 'spring', stiffness: 300, damping: 24, delay: 0.4 }}
         className="w-16 h-16 md:w-20 md:h-20 rounded-full bg-gradient-to-br from-[#7C3AED] to-[#8B5CF6] flex items-center justify-center relative z-10"
-        style={{ boxShadow: '0 0 60px rgba(124, 58, 237, 0.5)' }}
+        style={{ boxShadow: '0 0 28px rgba(124, 58, 237, 0.25)' }}
       >
         <Sparkles className="w-8 h-8 md:w-10 md:h-10 text-white" />
       </motion.div>
@@ -72,9 +72,9 @@ const WelcomeScreen = memo(function WelcomeScreen() {
         initial={{ opacity: 0, y: 30 }}
         animate={{ opacity: 1, y: 0 }}
         transition={{ duration: 0.6, ease: easeOutExpo, delay: 0.7 }}
-        className="relative z-10 text-[28px] md:text-[36px] font-bold text-center leading-tight tracking-tight"
+        className="relative z-10 text-[26px] md:text-[36px] font-bold text-center leading-tight tracking-tight"
       >
-        <span className="bg-gradient-to-r from-[#7C3AED] via-[#8B5CF6] to-[#A78BFA] bg-clip-text text-transparent">
+        <span className="text-slate-900 lg:gradient-text">
           Pesat AI Business Architect
         </span>
       </motion.h1>
@@ -84,7 +84,7 @@ const WelcomeScreen = memo(function WelcomeScreen() {
         initial={{ opacity: 0, y: 20 }}
         animate={{ opacity: 1, y: 0 }}
         transition={{ duration: 0.5, ease: easeOutExpo, delay: 1.0 }}
-        className="relative z-10 text-[16px] md:text-[18px] font-semibold text-[#F8FAFC] text-center max-w-[520px] leading-snug"
+        className="relative z-10 text-[16px] md:text-[18px] font-semibold text-slate-700 text-center max-w-[520px] leading-snug lg:text-[#F8FAFC]"
       >
         Naikkan omset, hemat banyak, tanpa harus tambah karyawan.
       </motion.p>
@@ -94,7 +94,7 @@ const WelcomeScreen = memo(function WelcomeScreen() {
         initial={{ opacity: 0, y: 20 }}
         animate={{ opacity: 1, y: 0 }}
         transition={{ duration: 0.5, ease: easeOutExpo, delay: 1.2 }}
-        className="relative z-10 text-[14px] md:text-[15px] font-medium text-[#A78BFA] text-center max-w-[480px] leading-relaxed"
+        className="relative z-10 text-[14px] md:text-[15px] font-medium text-[#7C3AED] text-center max-w-[480px] leading-relaxed lg:text-[#A78BFA]"
       >
         AI yang belajar bisnis Anda, bukan bisnis Anda yang belajar AI.
       </motion.p>
@@ -104,7 +104,7 @@ const WelcomeScreen = memo(function WelcomeScreen() {
         initial={{ opacity: 0, y: 20 }}
         animate={{ opacity: 1, y: 0 }}
         transition={{ duration: 0.5, ease: easeOutExpo, delay: 1.4 }}
-        className="relative z-10 text-[13px] md:text-[14px] font-normal text-[#CBD5E1] text-center max-w-[520px] leading-relaxed"
+        className="relative z-10 text-[13px] md:text-[14px] font-normal text-slate-500 text-center max-w-[520px] leading-relaxed lg:text-[#CBD5E1]"
       >
         Ceritakan bisnis atau brand Anda, dan saya bantu carikan solusi
         Apps/AI yang paling cocok untuk menyelesaikan tantangan bisnis yang

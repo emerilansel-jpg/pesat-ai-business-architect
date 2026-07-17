@@ -1,4 +1,8 @@
 const http = require('http');
+const dns = require('dns');
+
+// Prefer IPv4 to avoid connect timeouts when IPv6 resolution fails.
+dns.setDefaultResultOrder('ipv4first');
 
 const MAX_BODY_BYTES = 20 * 1024 * 1024; // 20 MB safety limit
 
@@ -13,6 +17,12 @@ const CORS = {
   'Access-Control-Max-Age': '86400',
   'Content-Type': 'application/json',
 };
+
+function fetchWithTimeout(url, options = {}, timeoutMs = 60000) {
+  const controller = new AbortController();
+  const timeout = setTimeout(() => controller.abort(), timeoutMs);
+  return fetch(url, { ...options, signal: controller.signal }).finally(() => clearTimeout(timeout));
+}
 
 const server = http.createServer(async (req, res) => {
   if (req.method === 'OPTIONS') {
@@ -76,7 +86,7 @@ const server = http.createServer(async (req, res) => {
 
         console.log(`[chat] provider=${provider} model=${payload.model} messages=${payload.messages.length} totalBody=${bodySize}`);
 
-        const response = await fetch(apiUrl, {
+        const response = await fetchWithTimeout(apiUrl, {
           method: 'POST',
           headers: {
             'Content-Type': 'application/json',
