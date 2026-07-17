@@ -526,7 +526,7 @@
 - **Next step:** Monitor production chat behavior, especially the first-message alignment and mobile ActivityPanel UX.
 - **Inspector:** PASSED
 - **Backup location:** `D:\Claude Cowork\Pesat ai business architect\backups\2026-07-17_2130_activity-panel-mobile\`
-- **coldstart.md stored at:** `D:\Claude Cowork\Pesat ai business architect\coldstart.md`
+- **coldstart.md stored at:** `D:\Claude Cowork\Pesat ai business architect\coldstart.md` (also committed/pushed to GitHub repo as `COLDSTART.md`)
 - **Browser used:** Edge (CDP, https://apps.pesat.ai/advisor/)
 
 
