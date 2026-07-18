@@ -522,6 +522,7 @@
   - Production deployment via `scripts/final-deploy.js` succeeded; `/api/health` returned `{"status":"ok"}`.
   - Public `https://apps.pesat.ai/advisor/` was still serving the wrong Chrome Extension page because the Cloudflare Tunnel `pesat-advisor-v3` had its ingress config reset to `http_status:404`. Cloudflare then fell back to the `pesat-ai-homepage` worker.
   - Fixed the public URL by deleting the `apps.pesat.ai` Tunnel record and adding a new A record pointing to `148.230.103.98`. Cloudflare now proxies directly to the VPS origin where Caddy serves the advisor app.
+  - **Update 2026-07-18 09:30**: DNS record reverted to Tunnel `apps-pesat-ai` (likely from an automated tunnel or external change), causing `apps.pesat.ai` to serve the Pesat AI Agent page again. Re-deleted the Tunnel record and re-added A record `148.230.103.98`. Production URL now returns Pesat AI Business Architect.
 - **Blockers:** none
 - **Next step:** Monitor production chat behavior, especially the first-message alignment and mobile ActivityPanel UX.
 - **Inspector:** PASSED
