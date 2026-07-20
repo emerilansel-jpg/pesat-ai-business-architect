@@ -15,7 +15,12 @@ export type ActivityIcon =
   | 'image'
   | 'sparkle'
   | 'success'
-  | 'error';
+  | 'error'
+  | 'meeting'
+  | 'coffee'
+  | 'design'
+  | 'code'
+  | 'deploy';
 
 export type ActivityStage =
   | 'idle'
@@ -23,6 +28,8 @@ export type ActivityStage =
   | 'searching'
   | 'analyzing'
   | 'crafting'
+  | 'meeting'
+  | 'image'
   | 'success'
   | 'error';
 

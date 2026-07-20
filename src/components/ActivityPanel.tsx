@@ -1,15 +1,19 @@
-import { motion, AnimatePresence, PanInfo } from 'framer-motion';
+import { motion, AnimatePresence, useDragControls } from 'framer-motion';
 import { useActivity, type ActivityItem, type ActivityIcon, type ActivityStage } from '../contexts/ActivityContext';
 import {
   Sparkles,
   X,
   ChevronUp,
   Trophy,
-  Zap,
-  Target,
-  Rocket,
   Loader2,
   Minus,
+  Lightbulb,
+  Search,
+  BarChart3,
+  Users,
+  Paintbrush,
+  Coffee,
+  AlertTriangle,
 } from 'lucide-react';
 import { useState, useEffect, useCallback } from 'react';
 
@@ -18,39 +22,69 @@ const stageMeta: Record<
   { label: string; color: string; gradient: string; progress: number }
 > = {
   thinking: {
-    label: 'Thinking',
+    label: 'Mikir dulu...',
     color: '#7C3AED',
     gradient: 'from-[#7C3AED]/25 to-[#3B82F6]/10',
-    progress: 20,
+    progress: 15,
   },
   search: {
-    label: 'Researching',
+    label: 'Riset dulu...',
     color: '#3B82F6',
     gradient: 'from-[#3B82F6]/25 to-[#06B6D4]/10',
-    progress: 40,
+    progress: 30,
   },
   analyze: {
-    label: 'Analyzing',
+    label: 'Planning dulu...',
     color: '#06B6D4',
     gradient: 'from-[#06B6D4]/25 to-[#8B5CF6]/10',
-    progress: 60,
+    progress: 45,
   },
   sparkle: {
-    label: 'Crafting',
+    label: 'Ajak tim ahli rapat...',
     color: '#EC4899',
     gradient: 'from-[#EC4899]/25 to-[#7C3AED]/10',
-    progress: 80,
+    progress: 60,
   },
   image: {
-    label: 'Drawing',
+    label: 'Contacting Jaka Sembung (Design expert)...',
     color: '#F59E0B',
     gradient: 'from-[#F59E0B]/25 to-[#7C3AED]/10',
+    progress: 80,
+  },
+  meeting: {
+    label: 'Meeting dimulai...',
+    color: '#8B5CF6',
+    gradient: 'from-[#8B5CF6]/25 to-[#EC4899]/10',
+    progress: 70,
+  },
+  coffee: {
+    label: 'Ngopi dulu bentar...',
+    color: '#A97142',
+    gradient: 'from-[#A97142]/25 to-[#F59E0B]/10',
+    progress: 75,
+  },
+  design: {
+    label: 'Assign task ke Jaka Sembung...',
+    color: '#EC4899',
+    gradient: 'from-[#EC4899]/25 to-[#F59E0B]/10',
+    progress: 85,
+  },
+  code: {
+    label: 'Sri Asih & tim coding mulai gerak...',
+    color: '#3B82F6',
+    gradient: 'from-[#3B82F6]/25 to-[#06B6D4]/10',
     progress: 90,
   },
+  deploy: {
+    label: 'Tukang bubur depan juga dikasih task...',
+    color: '#10B981',
+    gradient: 'from-[#10B981]/25 to-[#3B82F6]/10',
+    progress: 95,
+  },
   success: {
-    label: 'Done',
+    label: 'Done!',
     color: '#22C55E',
-    gradient: 'from-[#22C55E]/25 to-[#7C3AED]/10',
+    gradient: 'from-[#22C55E]/25 to-[#3B82F6]/10',
     progress: 100,
   },
   error: {
@@ -63,62 +97,80 @@ const stageMeta: Record<
 
 const funMessages: Record<ActivityIcon, string[]> = {
   thinking: [
-    'Sedang nyalain otak AI...',
-    'Sedang panggil semua neuron cerdas...',
-    'Sedang kumpulkan kecerdasan buat anda...',
-    'Otak robot lagi loading...',
-    'Sedang mikir keras nih...',
+    'Sedang mikir keras bareng tim...',
+    'Nyalain otak AI dan ngopi dulu...',
+    'Buka pikiran, siapin strategi...',
+    ' brainstorming internal dulu...',
   ],
   search: [
-    'Sedang jelajah internet...',
-    'Sedang intip kompetitor...',
-    'Sedang cari fakta menarik...',
-    'Sedang googling yang penting...',
-    'Sedang scan berita & tren...',
+    'Sedang jelajah internet & kompetitor...',
+    'Riset market & tren terbaru...',
+    'Intip data & review customer...',
+    'Cari fakta menarik buat bisnis anda...',
   ],
   analyze: [
     'Sedang baca pola bisnis anda...',
-    'Sedang ngeramal peluang...',
-    'Sedang analisa data...',
-    'Sedang connect the dots...',
-    'Sedang cari bottleneck tersembunyi...',
+    'Planning & connect the dots...',
+    'Analisa bottleneck tersembunyi...',
+    'Susun strategi jitu...',
   ],
   sparkle: [
-    'Sedang racik jawaban keren...',
-    'Sedang tulis strategi jitu...',
-    'Sedang susun solusi WOW...',
-    'Sedang masak resep sukses...',
-    'Sedang polish ide jadi emas...',
+    'Ajak tim ahli rapat virtual...',
+    'Sedang diskusi seru sama expert...',
+    'Racik solusi yang paling masuk akal...',
+    'Polish ide jadi emas...',
   ],
   image: [
-    'Sedang gambar visual lucu...',
-    'Sedang buat ilustrasi...',
-    'Sedang warnai ide...',
-    'Sedang design gambar...',
-    'Sedang jepret visual...',
+    'Contacting Jaka Sembung (Design expert)...',
+    'Jaka Sembung lagi siapin sketch...',
+    'Sedang gambar visual strategis...',
+    'Design team lagi ngopi & ngerjain...',
+  ],
+  meeting: [
+    'Meeting dimulai...',
+    'Semua expert sudah on cam...',
+    'Sedang presentasi hasil riset...',
+  ],
+  coffee: [
+    'Ngopi dulu bentar...',
+    'Istirahat sejenak sambil mikir...',
+    'Kopi item pahit, ide manis...',
+  ],
+  design: [
+    'Assign task ke Jaka Sembung...',
+    'Jaka Sembung mulai design...',
+    'Sri Asih siap bantu review...',
+  ],
+  code: [
+    'Sri Asih & tim coding mulai gerak...',
+    'Sedang bangun sistem & automasi...',
+    'Coding sambil dengerin dangdut...',
+  ],
+  deploy: [
+    'Tukang bubur depan juga dikasih task...',
+    'Sedang deploy & final check...',
+    'Semua tim fokus nyelesaiin...',
   ],
   success: [
     'Selesai! Keren kan? 🎉',
     'Jadi! Siap bantu lagi? 🚀',
-    'Selesai! Yuk lanjut! 🏆',
-    'Mantap, respons sudah siap! ✨',
     'Done! Semoga membantu! 🎊',
+    'Mantap, respons sudah siap! ✨',
   ],
   error: [
     'Ups, ada error. Coba lagi ya? 😅',
     'Waduh, ada kendala teknis. Coba ulang! 🛠️',
     'Gagal nih, tapi jangan menyerah! 🚀',
-    'Error detected. Coba lagi dalam detik! 🤖',
     'Hickup! Mari coba sekali lagi. 💪',
   ],
 };
 
 const funFacts = [
-  'Fun fact: AI ini lebih suka kopi virtual. ☕',
-  'Minion fact: 1 otak AI = 10.000 cup kopi.',
+  'Fun fact: Tim virtual kita kerja 24/7 tanpa ngantuk. ☕',
+  'Robot fact: 1 otak AI = 10.000 cup kopi.',
   'Tips: Bisnis yang bagus = sistem + orang + otomatisasi.',
   'Tahukah anda? 80% bottleneck bisnis ada di operasional.',
-  'Minion kita ini jago strategi, tapi nggak bisa nyetir. 🚗',
+  'Team kita ini jago strategi, tapi nggak bisa nyetir. 🚗',
   'Fun fact: Prompt yang spesifik = hasil yang jauh lebih bagus.',
   'Tips: Scale bisnis = kurangi owner dependency.',
   'Tahukah anda? AI agent bisa kerja 24/7 tanpa ngantuk.',
@@ -144,11 +196,25 @@ const stageSpeed: Record<ActivityStage, number> = {
   searching: 0.9,
   analyzing: 0.7,
   crafting: 0.5,
+  meeting: 0.6,
+  image: 0.6,
   success: 0.35,
   error: 0,
 };
 
-function MinionCharacter({
+const stageToIcon: Record<ActivityStage, ActivityIcon> = {
+  idle: 'thinking',
+  thinking: 'thinking',
+  searching: 'search',
+  analyzing: 'analyze',
+  crafting: 'sparkle',
+  meeting: 'meeting',
+  image: 'image',
+  success: 'success',
+  error: 'error',
+};
+
+function CendekiaBot({
   icon,
   stage,
   isProcessing,
@@ -160,35 +226,6 @@ function MinionCharacter({
   const isSuccess = icon === 'success';
   const isError = icon === 'error';
   const walkDuration = stageSpeed[stage] || 1;
-
-  const mouthPath = isSuccess
-    ? 'M35 70 Q50 80 65 70'
-    : isError
-    ? 'M40 72 Q50 65 60 72'
-    : 'M40 72 Q50 78 60 72';
-
-  const armLeftAnim = isProcessing
-    ? { x2: [10, 5, 10], y2: [55, 45, 55] }
-    : { x2: 10, y2: 60 };
-  const armRightAnim = isProcessing
-    ? { x2: [90, 95, 90], y2: [55, 45, 55] }
-    : { x2: 90, y2: 60 };
-  const legLeftAnim = isProcessing
-    ? { x2: [38, 32, 38], y2: [92, 88, 92] }
-    : { x2: 38, y2: 92 };
-  const legRightAnim = isProcessing
-    ? { x2: [62, 68, 62], y2: [88, 92, 88] }
-    : { x2: 62, y2: 92 };
-
-  const gloveLeftAnim = isProcessing
-    ? { cx: [6, 3, 6], cy: [45, 42, 45] }
-    : { cx: 10, cy: 60 };
-  const gloveRightAnim = isProcessing
-    ? { cx: [94, 97, 94], cy: [45, 42, 45] }
-    : { cx: 90, cy: 60 };
-
-  const shoeLeftAnim = isProcessing ? { cx: [32, 28, 32] } : { cx: 38 };
-  const shoeRightAnim = isProcessing ? { cx: [68, 72, 68] } : { cx: 62 };
 
   return (
     <div className="relative w-24 h-24 mx-auto">
@@ -202,7 +239,7 @@ function MinionCharacter({
         className="absolute inset-0 rounded-full bg-gradient-to-r from-[#7C3AED]/40 to-[#3B82F6]/40 blur-xl"
       />
 
-      {/* Walking / celebrating character */}
+      {/* Robot character */}
       <motion.div
         animate={
           isProcessing
@@ -219,120 +256,137 @@ function MinionCharacter({
         className="relative z-10 w-24 h-24"
       >
         <svg viewBox="0 0 100 100" className="w-full h-full drop-shadow-lg">
-          {/* Body */}
-          <rect x="25" y="20" width="50" height="55" rx="22" fill="#FCD34D" />
-          {/* Overalls */}
-          <path d="M25 60 L25 75 Q25 82 32 82 L68 82 Q75 82 75 75 L75 60 L65 60 L65 48 L35 48 L35 60 Z" fill="#3B82F6" />
-          <rect x="35" y="48" width="30" height="22" fill="#3B82F6" />
-          {/* Straps */}
-          <path d="M35 48 L25 40" stroke="#3B82F6" strokeWidth="5" strokeLinecap="round" />
-          <path d="M65 48 L75 40" stroke="#3B82F6" strokeWidth="5" strokeLinecap="round" />
-          {/* Pocket */}
-          <path d="M42 58 L58 58 L55 70 L45 70 Z" fill="#2563EB" />
-          {/* Goggles */}
-          <rect x="23" y="30" width="54" height="12" rx="6" fill="#4B5563" />
-          <circle cx="38" cy="36" r="10" fill="#9CA3AF" />
-          <circle cx="62" cy="36" r="10" fill="#9CA3AF" />
+          {/* Graduation cap + smart antenna */}
+          <motion.path
+            d="M22 22 L50 12 L78 22 L50 32 Z"
+            fill="#0B0F1A"
+            stroke="#7C3AED"
+            strokeWidth="2.5"
+            strokeLinejoin="round"
+            animate={isSuccess ? { y: [0, -2, 0] } : {}}
+            transition={{ duration: 0.4, repeat: Infinity }}
+          />
+          <rect x="22" y="22" width="56" height="5" rx="2" fill="#0B0F1A" stroke="#7C3AED" strokeWidth="2.5" />
+          <line x1="74" y1="22" x2="74" y2="30" stroke="#FCD34D" strokeWidth="2" strokeLinecap="round" />
+          <motion.circle
+            cx="74"
+            cy="30"
+            r="2.5"
+            fill="#FCD34D"
+            animate={isProcessing ? { opacity: [0.5, 1, 0.5], scale: [1, 1.2, 1] } : {}}
+            transition={{ duration: 1, repeat: Infinity }}
+          />
+          {/* Side antenna */}
+          <line x1="83" y1="28" x2="83" y2="18" stroke="#7C3AED" strokeWidth="2" strokeLinecap="round" />
+          <motion.circle
+            cx="83"
+            cy="18"
+            r="3"
+            fill="#3B82F6"
+            animate={isProcessing ? { opacity: [0.5, 1, 0.5], scale: [1, 1.3, 1] } : {}}
+            transition={{ duration: 0.8, repeat: Infinity, delay: 0.2 }}
+          />
+
+          {/* Head */}
+          <rect x="25" y="28" width="50" height="40" rx="16" fill="#F8FAFC" />
+          <rect x="25" y="28" width="50" height="40" rx="16" fill="url(#batik)" opacity="0.18" />
+
           {/* Eyes */}
           <motion.circle
+            cx="38"
+            cy="42"
+            r="8"
+            fill="#0B0F1A"
             animate={isProcessing ? { scaleY: [1, 0.1, 1] } : { scaleY: 1 }}
             transition={{ duration: 0.2, repeat: isProcessing ? 3 : 0, delay: 0.5, repeatDelay: 1.5 }}
-            cx="38"
-            cy="36"
-            r="6"
-            fill="white"
           />
           <motion.circle
+            cx="62"
+            cy="42"
+            r="8"
+            fill="#0B0F1A"
             animate={isProcessing ? { scaleY: [1, 0.1, 1] } : { scaleY: 1 }}
             transition={{ duration: 0.2, repeat: isProcessing ? 3 : 0, delay: 0.5, repeatDelay: 1.5 }}
-            cx="62"
-            cy="36"
-            r="6"
-            fill="white"
           />
-          <circle cx="38" cy="36" r="3" fill="#1F2937" />
-          <circle cx="62" cy="36" r="3" fill="#1F2937" />
+          <circle cx="40" cy="40" r="2.5" fill="#F8FAFC" />
+          <circle cx="64" cy="40" r="2.5" fill="#F8FAFC" />
+
           {/* Mouth */}
           <motion.path
-            d={mouthPath}
-            stroke="#1F2937"
+            d={isSuccess ? 'M38 56 Q50 64 62 56' : isError ? 'M42 60 Q50 54 58 60' : 'M40 58 Q50 64 60 58'}
+            stroke="#0B0F1A"
             strokeWidth="3"
             strokeLinecap="round"
             fill="transparent"
           />
+
+          {/* Body with batik pattern */}
+          <defs>
+            <pattern id="batik" x="0" y="0" width="10" height="10" patternUnits="userSpaceOnUse">
+              <rect width="10" height="10" fill="#7C3AED" />
+              <circle cx="5" cy="5" r="2" fill="#FCD34D" />
+              <rect x="1" y="1" width="2" height="2" fill="#3B82F6" />
+              <rect x="7" y="7" width="2" height="2" fill="#3B82F6" />
+            </pattern>
+          </defs>
+          <rect x="30" y="68" width="40" height="26" rx="10" fill="#7C3AED" />
+          <rect x="30" y="68" width="40" height="26" rx="10" fill="url(#batik)" opacity="0.3" />
+          {/* Pesat badge */}
+          <circle cx="50" cy="81" r="8" fill="#F8FAFC" opacity="0.9" />
+          <text
+            x="50"
+            y="84.5"
+            textAnchor="middle"
+            fontSize="10"
+            fontWeight="bold"
+            fill="#7C3AED"
+            fontFamily="system-ui, sans-serif"
+          >
+            P
+          </text>
+
           {/* Arms */}
           <motion.line
-            x1="25"
-            y1="50"
-            x2="10"
-            y2="60"
-            stroke="#FCD34D"
-            strokeWidth="6"
+            x1="30"
+            y1="75"
+            x2="15"
+            y2="80"
+            stroke="#7C3AED"
+            strokeWidth="4"
             strokeLinecap="round"
-            animate={armLeftAnim}
+            animate={isProcessing ? { x2: [15, 10, 15], y2: [70, 55, 70] } : { x2: 15, y2: 80 }}
           />
           <motion.line
-            x1="75"
-            y1="50"
-            x2="90"
-            y2="60"
-            stroke="#FCD34D"
-            strokeWidth="6"
+            x1="70"
+            y1="75"
+            x2="85"
+            y2="80"
+            stroke="#7C3AED"
+            strokeWidth="4"
             strokeLinecap="round"
-            animate={armRightAnim}
+            animate={isProcessing ? { x2: [85, 90, 85], y2: [70, 55, 70] } : { x2: 85, y2: 80 }}
           />
-          {/* Gloves */}
-          <motion.circle
-            cx="10"
-            cy="60"
-            r="5"
-            fill="#1F2937"
-            animate={gloveLeftAnim}
-          />
-          <motion.circle
-            cx="90"
-            cy="60"
-            r="5"
-            fill="#1F2937"
-            animate={gloveRightAnim}
-          />
+
           {/* Legs */}
           <motion.line
-            x1="38"
-            y1="80"
-            x2="38"
-            y2="92"
-            stroke="#3B82F6"
-            strokeWidth="6"
+            x1="40"
+            y1="94"
+            x2="40"
+            y2="100"
+            stroke="#7C3AED"
+            strokeWidth="4"
             strokeLinecap="round"
-            animate={legLeftAnim}
+            animate={isProcessing ? { y2: [100, 95, 100] } : {}}
           />
           <motion.line
-            x1="62"
-            y1="80"
-            x2="62"
-            y2="92"
-            stroke="#3B82F6"
-            strokeWidth="6"
+            x1="60"
+            y1="94"
+            x2="60"
+            y2="100"
+            stroke="#7C3AED"
+            strokeWidth="4"
             strokeLinecap="round"
-            animate={legRightAnim}
-          />
-          {/* Shoes */}
-          <motion.ellipse
-            cx="38"
-            cy="94"
-            rx="8"
-            ry="4"
-            fill="#1F2937"
-            animate={shoeLeftAnim}
-          />
-          <motion.ellipse
-            cx="62"
-            cy="94"
-            rx="8"
-            ry="4"
-            fill="#1F2937"
-            animate={shoeRightAnim}
+            animate={isProcessing ? { y2: [100, 105, 100] } : {}}
           />
         </svg>
       </motion.div>
@@ -370,9 +424,147 @@ function WalkingDots() {
   );
 }
 
+function FloatingSparkles({ isProcessing }: { isProcessing: boolean }) {
+  const particles = [
+    { color: '#FCD34D', x: -40, y: -30, delay: 0, size: 4 },
+    { color: '#7C3AED', x: 40, y: -35, delay: 0.3, size: 3 },
+    { color: '#3B82F6', x: -45, y: 10, delay: 0.6, size: 3.5 },
+    { color: '#EC4899', x: 45, y: 15, delay: 0.9, size: 4 },
+    { color: '#F59E0B', x: -30, y: 40, delay: 1.2, size: 3 },
+    { color: '#22C55E', x: 35, y: 45, delay: 1.5, size: 3.5 },
+  ];
+
+  return (
+    <div className="absolute inset-0 pointer-events-none">
+      {particles.map((p, i) => (
+        <motion.div
+          key={i}
+          className="absolute rounded-full"
+          style={{
+            left: '50%',
+            top: '50%',
+            width: p.size,
+            height: p.size,
+            backgroundColor: p.color,
+            boxShadow: `0 0 8px ${p.color}`,
+            marginLeft: p.x,
+            marginTop: p.y,
+          }}
+          animate={{
+            y: [0, -12, 0, 8, 0],
+            x: [0, 6, 0, -6, 0],
+            opacity: isProcessing ? [0.4, 1, 0.4, 0.8, 0.4] : [0.2, 0.5, 0.2, 0.4, 0.2],
+            scale: [1, 1.3, 1, 1.1, 1],
+          }}
+          transition={{
+            duration: 2.5 + i * 0.3,
+            repeat: Infinity,
+            delay: p.delay,
+            ease: 'easeInOut',
+          }}
+        />
+      ))}
+    </div>
+  );
+}
+
+function PulseRing({ color }: { color: string }) {
+  return (
+    <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
+      <motion.div
+        initial={{ scale: 0.8, opacity: 0.8 }}
+        animate={{ scale: 1.8, opacity: 0 }}
+        transition={{ duration: 0.8, ease: 'easeOut' }}
+        className="w-24 h-24 rounded-full"
+        style={{ border: `2px solid ${color}` }}
+      />
+    </div>
+  );
+}
+
+function BotTrail({ color, isProcessing }: { color: string; isProcessing: boolean }) {
+  const trail = Array.from({ length: 5 }).map((_, i) => ({
+    id: i,
+    angle: (i * 72 + 30) * (Math.PI / 180),
+    distance: 28 + i * 6,
+    delay: i * 0.12,
+  }));
+
+  return (
+    <div className="absolute inset-0 pointer-events-none">
+      {trail.map((t) => {
+        const x = Math.cos(t.angle) * t.distance;
+        const y = Math.sin(t.angle) * t.distance;
+        return (
+          <motion.div
+            key={t.id}
+            className="absolute rounded-full"
+            style={{
+              left: '50%',
+              top: '50%',
+              width: 4,
+              height: 4,
+              marginLeft: x - 2,
+              marginTop: y - 2,
+              backgroundColor: color,
+              boxShadow: `0 0 6px ${color}`,
+            }}
+            animate={{
+              scale: isProcessing ? [1, 1.5, 1] : [1, 1.2, 1],
+              opacity: isProcessing ? [0.2, 0.7, 0.2] : [0.1, 0.3, 0.1],
+              x: [0, x * 0.3, 0],
+              y: [0, y * 0.3, 0],
+            }}
+            transition={{
+              duration: 1.6,
+              repeat: Infinity,
+              delay: t.delay,
+              ease: 'easeInOut',
+            }}
+          />
+        );
+      })}
+    </div>
+  );
+}
+
+function StageBadge({ stage, color }: { stage: ActivityStage; color: string }) {
+  const labels: Record<ActivityStage, string> = {
+    idle: 'Ready',
+    thinking: 'Think',
+    searching: 'Research',
+    analyzing: 'Analyze',
+    crafting: 'Craft',
+    meeting: 'Meeting',
+    image: 'Design',
+    success: 'Done!',
+    error: 'Oops',
+  };
+
+  return (
+    <div className="absolute -top-3 left-1/2 -translate-x-1/2 pointer-events-none">
+      <motion.div
+        initial={{ opacity: 0, y: 10, scale: 0.6 }}
+        animate={{ opacity: 1, y: -18, scale: 1 }}
+        exit={{ opacity: 0, y: -28, scale: 0.8 }}
+        transition={{ type: 'spring', stiffness: 400, damping: 25 }}
+        className="px-2.5 py-1 rounded-full text-[10px] font-bold text-white shadow-lg"
+        style={{ backgroundColor: color }}
+      >
+        {labels[stage]}
+      </motion.div>
+    </div>
+  );
+}
+
 function ActivityLogItem({ log, isCurrent }: { log: ActivityItem; isCurrent: boolean }) {
   return (
-    <div className={`flex items-start gap-3 py-2 px-2 rounded-lg ${isCurrent ? 'bg-[rgba(124,58,237,0.08)]' : ''}`}>
+    <motion.div
+      initial={{ opacity: 0, y: -8, scale: 0.98 }}
+      animate={{ opacity: 1, y: 0, scale: 1 }}
+      transition={{ type: 'spring', stiffness: 300, damping: 25 }}
+      className={`flex items-start gap-3 py-2 px-2 rounded-lg ${isCurrent ? 'bg-[rgba(124,58,237,0.08)]' : ''}`}
+    >
       <div className="flex-shrink-0 mt-0.5 text-lg leading-none">
         {log.status === 'done' ? '✅' : isCurrent ? '⏳' : '•'}
       </div>
@@ -384,28 +576,21 @@ function ActivityLogItem({ log, isCurrent }: { log: ActivityItem; isCurrent: boo
           )}
         </p>
       </div>
-    </div>
+    </motion.div>
   );
 }
 
-const stageToIcon: Record<ActivityStage, ActivityIcon> = {
-  idle: 'thinking',
-  thinking: 'thinking',
-  searching: 'search',
-  analyzing: 'analyze',
-  crafting: 'sparkle',
-  success: 'success',
-  error: 'error',
-};
-
 function ProgressBar({ stage, isProcessing }: { stage: ActivityStage; isProcessing: boolean }) {
-  const meta = stageMeta[stageToIcon[stage]] || stageMeta.thinking;
+  const icon = stageToIcon[stage] || 'thinking';
+  const meta = stageMeta[icon] || stageMeta.thinking;
   const progress = {
     idle: 5,
     thinking: 15,
-    searching: 35,
-    analyzing: 55,
-    crafting: 80,
+    searching: 30,
+    analyzing: 45,
+    crafting: 60,
+    meeting: 70,
+    image: 80,
     success: 100,
     error: 100,
   }[stage];
@@ -415,107 +600,162 @@ function ProgressBar({ stage, isProcessing }: { stage: ActivityStage; isProcessi
       <div className="flex items-center justify-between mb-1.5">
         <span className="text-[11px] font-semibold text-[#F8FAFC] flex items-center gap-1">
           {stage === 'success' && <Trophy className="w-3 h-3 text-[#22C55E]" />}
-          {stage === 'error' && <Zap className="w-3 h-3 text-[#EF4444]" />}
-          {stage === 'thinking' && <Target className="w-3 h-3 text-[#7C3AED]" />}
-          {stage === 'searching' && <Rocket className="w-3 h-3 text-[#3B82F6]" />}
-          {stage === 'analyzing' && <Zap className="w-3 h-3 text-[#06B6D4]" />}
-          {stage === 'crafting' && <Sparkles className="w-3 h-3 text-[#EC4899]" />}
-          {stage === 'idle' && <Target className="w-3 h-3 text-[#7C3AED]" />}
+          {stage === 'error' && <AlertTriangle className="w-3 h-3 text-[#EF4444]" />}
+          {stage === 'thinking' && <Lightbulb className="w-3 h-3 text-[#7C3AED]" />}
+          {stage === 'searching' && <Search className="w-3 h-3 text-[#3B82F6]" />}
+          {stage === 'analyzing' && <BarChart3 className="w-3 h-3 text-[#06B6D4]" />}
+          {stage === 'crafting' && <Users className="w-3 h-3 text-[#EC4899]" />}
+          {stage === 'meeting' && <Coffee className="w-3 h-3 text-[#8B5CF6]" />}
+          {stage === 'image' && <Paintbrush className="w-3 h-3 text-[#F59E0B]" />}
+          {stage === 'idle' && <Lightbulb className="w-3 h-3 text-[#7C3AED]" />}
           {meta.label}
         </span>
         <span className="text-[11px] font-bold" style={{ color: meta.color }}>
           {progress}%
         </span>
       </div>
-        <div className="h-2 w-full bg-[rgba(255,255,255,0.08)] rounded-full overflow-hidden">
+      <div className="h-2 w-full bg-[rgba(255,255,255,0.08)] rounded-full overflow-hidden">
         <motion.div
           initial={{ width: 0 }}
           animate={{ width: `${progress}%`, opacity: isProcessing ? [0.8, 1, 0.8] : 1 }}
           transition={{ duration: 0.6, ease: [0.16, 1, 0.3, 1] }}
-          className="h-full rounded-full"
+          className="h-full rounded-full relative"
           style={{ backgroundColor: meta.color }}
-        />
+        >
+          {isProcessing && (
+            <>
+              <motion.div
+                className="absolute inset-0 rounded-full"
+                style={{ background: `linear-gradient(90deg, transparent, ${meta.color}, transparent)` }}
+                animate={{ x: ['-100%', '100%'] }}
+                transition={{ duration: 1.2, repeat: Infinity, ease: 'linear' }}
+              />
+              <motion.div
+                className="absolute inset-0 rounded-full"
+                style={{ boxShadow: `0 0 14px 2px ${meta.color}` }}
+                animate={{ opacity: [0.4, 0.9, 0.4] }}
+                transition={{ duration: 1.2, repeat: Infinity, ease: 'easeInOut' }}
+              />
+              <motion.div
+                className="absolute inset-0 rounded-full"
+                style={{ background: 'linear-gradient(120deg, transparent 30%, rgba(255,255,255,0.4) 50%, transparent 70%)' }}
+                initial={{ x: '-100%' }}
+                animate={{ x: ['-100%', '100%'] }}
+                transition={{ duration: 1.5, repeat: Infinity, ease: 'linear' }}
+              />
+            </>
+          )}
+        </motion.div>
       </div>
     </div>
   );
 }
 
+function Confetti() {
+  const colors = ['#FCD34D', '#7C3AED', '#3B82F6', '#EC4899', '#22C55E', '#F59E0B'];
+  const particles = Array.from({ length: 16 }).map((_, i) => ({
+    id: i,
+    x: (Math.random() - 0.5) * 200,
+    y: (Math.random() - 0.5) * 200 - 50,
+    rotate: Math.random() * 360,
+    color: colors[i % colors.length],
+    size: 4 + Math.random() * 4,
+  }));
+
+  return (
+    <div className="absolute inset-0 pointer-events-none overflow-visible flex items-center justify-center">
+      {particles.map((p) => (
+        <motion.div
+          key={p.id}
+          initial={{ opacity: 1, x: 0, y: 0, rotate: 0, scale: 1 }}
+          animate={{
+            opacity: [1, 1, 0],
+            x: [0, p.x, p.x * 1.5],
+            y: [0, p.y, p.y + 120],
+            rotate: [0, p.rotate, p.rotate + 180],
+            scale: [1, 1.2, 0.6],
+          }}
+          transition={{ duration: 1.2, ease: 'easeOut' }}
+          className="absolute rounded-sm"
+          style={{ backgroundColor: p.color, width: p.size, height: p.size }}
+        />
+      ))}
+    </div>
+  );
+}
+
 export default function ActivityPanel() {
-  const { logs, isVisible, isProcessing, currentStage, clearLogs } = useActivity();
+  const { logs, isProcessing, currentStage, clearLogs } = useActivity();
   const [desktopCollapsed, setDesktopCollapsed] = useState(false);
-  const [mobileExpanded, setMobileExpanded] = useState(true);
+  const [mobileOpen, setMobileOpen] = useState(true);
   const [funFactIndex] = useState(() => Math.floor(Math.random() * funFacts.length));
 
   const currentLog = logs[logs.length - 1];
-  const currentIcon = currentLog?.icon || 'thinking';
+  const currentIcon = currentLog?.icon || stageToIcon[currentStage] || 'thinking';
   const meta = stageMeta[currentIcon] || stageMeta.thinking;
   const funMessage = useFunMessage(currentIcon);
+  const dragControls = useDragControls();
 
   const currentLogId = currentLog?.id;
   const progress = {
     idle: 5,
     thinking: 15,
-    searching: 35,
-    analyzing: 55,
-    crafting: 80,
+    searching: 30,
+    analyzing: 45,
+    crafting: 60,
+    meeting: 70,
+    image: 80,
     success: 100,
     error: 100,
   }[currentStage];
 
-  // Reset collapse states when a new processing cycle starts.
+  // Reset mobile/desktop open state when a new processing cycle starts.
   useEffect(() => {
     if (isProcessing) {
       setDesktopCollapsed(false);
-      setMobileExpanded(true);
+      setMobileOpen(true);
     }
   }, [isProcessing]);
 
-  // Auto-hide the panel a few seconds after processing completes so the UI
-  // returns to a clean state without blocking the chat area.
+  // Expose mobile panel height as a CSS variable so the chat area can pad itself.
+  useEffect(() => {
+    if (typeof document === 'undefined') return;
+    document.documentElement.style.setProperty(
+      '--mobile-panel-height',
+      mobileOpen ? '55vh' : '0'
+    );
+  }, [mobileOpen]);
+
+  // Auto-hide the panel a few seconds after processing completes.
   useEffect(() => {
     if (!isProcessing && logs.length > 0) {
       const t = window.setTimeout(() => {
         clearLogs();
         setDesktopCollapsed(false);
-        setMobileExpanded(false);
+        setMobileOpen(false);
       }, 7000);
       return () => clearTimeout(t);
     }
   }, [isProcessing, logs.length, clearLogs]);
 
-  // If processing ends and there are no logs, clean up state immediately.
-  useEffect(() => {
-    if (!isProcessing && logs.length === 0) {
-      setDesktopCollapsed(false);
-      setMobileExpanded(false);
-    }
-  }, [isProcessing, logs.length]);
-
   const openMobile = useCallback(() => {
-    if (isProcessing || logs.length > 0) setMobileExpanded(true);
+    if (isProcessing || logs.length > 0) setMobileOpen(true);
   }, [isProcessing, logs.length]);
 
   const closeMobile = useCallback(() => {
-    setMobileExpanded(false);
+    setMobileOpen(false);
   }, []);
 
-  const handleDragEnd = useCallback(
-    (_event: MouseEvent | TouchEvent | PointerEvent, info: PanInfo) => {
-      if (info.offset.y > 80 || info.velocity.y > 500) {
-        closeMobile();
-      }
-    },
-    [closeMobile]
-  );
-
   // Keep the mobile mini bar visible while there are logs or processing is active.
-  const showMobile = isVisible || logs.length > 0 || isProcessing;
+  const showMobile = isProcessing || logs.length > 0;
+  // Desktop panel only shows when there is actual activity.
+  const showDesktop = isProcessing || logs.length > 0;
 
   return (
     <>
       {/* Desktop Right Panel */}
       <AnimatePresence mode="popLayout">
-        {!desktopCollapsed && (
+        {showDesktop && !desktopCollapsed && (
           <motion.aside
             key="desktop-panel"
             initial={{ opacity: 0, x: 40 }}
@@ -525,40 +765,66 @@ export default function ActivityPanel() {
             className="hidden xl:flex fixed right-4 top-20 bottom-24 w-[300px] flex-col z-40 pointer-events-auto"
           >
             <div
-              className={`bg-gradient-to-br ${meta.gradient} backdrop-blur-[16px] border border-[rgba(124,58,237,0.25)] rounded-2xl shadow-[0_8px_32px_rgba(0,0,0,0.4)] overflow-hidden h-full bg-[#0F1423]/90`}
+              className={`bg-gradient-to-br ${meta.gradient} backdrop-blur-[16px] border border-[rgba(124,58,237,0.25)] rounded-2xl shadow-[0_8px_32px_rgba(0,0,0,0.4)] overflow-hidden h-full bg-[#0F1423]/90 relative`}
             >
-              <div className="flex items-center justify-between px-4 py-3 border-b border-[rgba(124,58,237,0.15)]">
-                <div className="flex items-center gap-2">
-                  <Sparkles className="w-4 h-4 text-[#7C3AED]" />
-                  <h3 className="text-[13px] font-semibold text-[#F8FAFC]">
-                    Pesat AI lagi kerja...
-                  </h3>
+              <motion.div
+                className="absolute inset-0 pointer-events-none"
+                style={{ background: `radial-gradient(circle at 50% 30%, ${meta.color}22, transparent 60%)` }}
+                animate={{ opacity: isProcessing ? [0.3, 0.6, 0.3] : [0.2, 0.3, 0.2] }}
+                transition={{ duration: 2, repeat: Infinity, ease: 'easeInOut' }}
+              />
+              <div className="relative z-10 flex flex-col h-full">
+                <div className="flex items-center justify-between px-4 py-3 border-b border-[rgba(124,58,237,0.15)]">
+                  <div className="flex items-center gap-2">
+                    <Sparkles className="w-4 h-4 text-[#7C3AED]" />
+                    <h3 className="text-[13px] font-semibold text-[#F8FAFC]">
+                      Pesat AI lagi kerja...
+                    </h3>
+                  </div>
+                  <button
+                    onClick={() => setDesktopCollapsed(true)}
+                    className="p-1 rounded-md text-[#64748B] hover:text-[#CBD5E1] hover:bg-[rgba(124,58,237,0.1)] transition-colors"
+                    aria-label="Collapse activity panel"
+                  >
+                    <X className="w-3.5 h-3.5" />
+                  </button>
                 </div>
-                <button
-                  onClick={() => setDesktopCollapsed(true)}
-                  className="p-1 rounded-md text-[#64748B] hover:text-[#CBD5E1] hover:bg-[rgba(124,58,237,0.1)] transition-colors"
-                  aria-label="Collapse activity panel"
-                >
-                  <X className="w-3.5 h-3.5" />
-                </button>
-              </div>
 
-              <div className="flex-1 overflow-y-auto p-4 scrollbar-chat">
-                <div className="flex flex-col items-center gap-2 mb-2">
-                  <MinionCharacter icon={currentIcon} stage={currentStage} isProcessing={isProcessing} />
-                  {isProcessing && <WalkingDots />}
-                  <p className="text-[14px] font-bold text-[#F8FAFC] text-center leading-tight px-2">
+                <div className="flex-1 overflow-y-auto p-4 scrollbar-chat">
+                  <div className="flex flex-col items-center gap-2 mb-2">
+                    <div key={currentIcon} className="relative w-24 h-24 mx-auto">
+                      <FloatingSparkles isProcessing={isProcessing} />
+                      <BotTrail color={meta.color} isProcessing={isProcessing} />
+                      <AnimatePresence mode="wait">
+                        <PulseRing key={currentIcon + '-pulse'} color={meta.color} />
+                      </AnimatePresence>
+                      <AnimatePresence mode="wait">
+                        <StageBadge key={currentStage + '-badge'} stage={currentStage} color={meta.color} />
+                      </AnimatePresence>
+                      <CendekiaBot icon={currentIcon} stage={currentStage} isProcessing={isProcessing} />
+                    </div>
+                    {isProcessing && <WalkingDots />}
+                  <motion.p
+                    key={currentIcon + funMessage}
+                    initial={{ opacity: 0, y: 6, scale: 0.95 }}
+                    animate={{ opacity: 1, y: 0, scale: 1 }}
+                    transition={{ duration: 0.3, ease: [0.16, 1, 0.3, 1] }}
+                    className="text-[14px] font-bold text-[#F8FAFC] text-center leading-tight px-2"
+                  >
                     {funMessage}
-                  </p>
+                  </motion.p>
                   {currentStage === 'success' && (
-                    <motion.div
-                      initial={{ scale: 0, opacity: 0 }}
-                      animate={{ scale: 1, opacity: 1 }}
-                      transition={{ type: 'spring', stiffness: 300, damping: 20 }}
-                      className="px-3 py-1 rounded-full bg-gradient-to-r from-[#22C55E] to-[#3B82F6] text-white text-[11px] font-bold shadow-lg"
-                    >
-                      🏆 Quest Complete!
-                    </motion.div>
+                    <>
+                      <Confetti />
+                      <motion.div
+                        initial={{ scale: 0, opacity: 0 }}
+                        animate={{ scale: 1, opacity: 1 }}
+                        transition={{ type: 'spring', stiffness: 300, damping: 20 }}
+                        className="px-3 py-1 rounded-full bg-gradient-to-r from-[#22C55E] to-[#3B82F6] text-white text-[11px] font-bold shadow-lg"
+                      >
+                        🏆 Quest Complete!
+                      </motion.div>
+                    </>
                   )}
                 </div>
 
@@ -586,6 +852,7 @@ export default function ActivityPanel() {
                   </motion.div>
                 )}
               </div>
+              </div>
             </div>
           </motion.aside>
         )}
@@ -593,7 +860,7 @@ export default function ActivityPanel() {
 
       {/* Desktop Collapsed Pill */}
       <AnimatePresence>
-        {desktopCollapsed && (isProcessing || logs.length > 0) && (
+        {showDesktop && desktopCollapsed && (isProcessing || logs.length > 0) && (
           <motion.button
             initial={{ opacity: 0, scale: 0.9 }}
             animate={{ opacity: 1, scale: 1 }}
@@ -618,19 +885,29 @@ export default function ActivityPanel() {
             <motion.div
               key="mobile-sheet"
               initial={{ y: '100%' }}
-              animate={{ y: mobileExpanded ? '0%' : '100%' }}
+              animate={{ y: mobileOpen ? '0%' : '100%' }}
               exit={{ y: '100%' }}
               transition={{ type: 'spring', damping: 28, stiffness: 280 }}
               drag="y"
+              dragControls={dragControls}
               dragConstraints={{ top: 0, bottom: 0 }}
-              dragElastic={0.2}
-              onDragEnd={handleDragEnd}
-              className="lg:hidden fixed left-0 right-0 bottom-0 z-[60] h-[70vh] pointer-events-auto"
+              dragElastic={{ top: 0, bottom: 0.35 }}
+              onDragEnd={(_, info) => {
+                if (info.offset.y > 80 || info.velocity.y > 500) {
+                  closeMobile();
+                }
+              }}
+              className="lg:hidden fixed left-0 right-0 bottom-0 z-[60] h-[55vh] pointer-events-auto"
             >
               <div className="h-full bg-[#0F1423] rounded-t-[28px] shadow-[0_-8px_32px_rgba(0,0,0,0.35)] border-t border-[rgba(124,58,237,0.25)] flex flex-col overflow-hidden">
                 {/* Drag handle */}
                 <div className="flex flex-col items-center pt-3 pb-2 px-4 border-b border-[rgba(124,58,237,0.12)]">
-                  <div className="w-12 h-1.5 rounded-full bg-[rgba(255,255,255,0.15)] mb-3" />
+                  <motion.div
+                    onPointerDown={(e) => dragControls.start(e)}
+                    onClick={closeMobile}
+                    className="w-12 h-1.5 rounded-full bg-[rgba(255,255,255,0.15)] mb-3 cursor-pointer hover:bg-[rgba(255,255,255,0.25)] transition-colors"
+                    whileTap={{ scale: 0.9 }}
+                  />
                   <div className="w-full flex items-center justify-between">
                     <div className="flex items-center gap-2">
                       <Sparkles className="w-4 h-4 text-[#7C3AED]" />
@@ -651,20 +928,39 @@ export default function ActivityPanel() {
                 {/* Sheet content */}
                 <div className="flex-1 overflow-y-auto p-4 scrollbar-chat">
                   <div className="flex flex-col items-center gap-3 mb-4">
-                    <MinionCharacter icon={currentIcon} stage={currentStage} isProcessing={isProcessing} />
+                    <div key={currentIcon} className="relative w-24 h-24 mx-auto">
+                      <FloatingSparkles isProcessing={isProcessing} />
+                      <BotTrail color={meta.color} isProcessing={isProcessing} />
+                      <AnimatePresence mode="wait">
+                        <PulseRing key={currentIcon + '-pulse'} color={meta.color} />
+                      </AnimatePresence>
+                      <AnimatePresence mode="wait">
+                        <StageBadge key={currentStage + '-badge'} stage={currentStage} color={meta.color} />
+                      </AnimatePresence>
+                      <CendekiaBot icon={currentIcon} stage={currentStage} isProcessing={isProcessing} />
+                    </div>
                     {isProcessing && <WalkingDots />}
-                    <p className="text-[16px] font-bold text-[#F8FAFC] text-center leading-tight px-6">
+                    <motion.p
+                      key={currentIcon + funMessage}
+                      initial={{ opacity: 0, y: 6, scale: 0.95 }}
+                      animate={{ opacity: 1, y: 0, scale: 1 }}
+                      transition={{ duration: 0.3, ease: [0.16, 1, 0.3, 1] }}
+                      className="text-[16px] font-bold text-[#F8FAFC] text-center leading-tight px-6"
+                    >
                       {funMessage}
-                    </p>
+                    </motion.p>
                     {currentStage === 'success' && (
-                      <motion.div
-                        initial={{ scale: 0, opacity: 0 }}
-                        animate={{ scale: 1, opacity: 1 }}
-                        transition={{ type: 'spring', stiffness: 300, damping: 20 }}
-                        className="px-4 py-1.5 rounded-full bg-gradient-to-r from-[#22C55E] to-[#3B82F6] text-white text-[12px] font-bold shadow-lg"
-                      >
-                        🏆 Quest Complete!
-                      </motion.div>
+                      <>
+                        <Confetti />
+                        <motion.div
+                          initial={{ scale: 0, opacity: 0 }}
+                          animate={{ scale: 1, opacity: 1 }}
+                          transition={{ type: 'spring', stiffness: 300, damping: 20 }}
+                          className="px-4 py-1.5 rounded-full bg-gradient-to-r from-[#22C55E] to-[#3B82F6] text-white text-[12px] font-bold shadow-lg"
+                        >
+                          🏆 Quest Complete!
+                        </motion.div>
+                      </>
                     )}
                   </div>
 
@@ -697,19 +993,20 @@ export default function ActivityPanel() {
 
             {/* Backdrop for expanded sheet */}
             <AnimatePresence>
-              {mobileExpanded && (
+              {mobileOpen && (
                 <motion.div
                   initial={{ opacity: 0 }}
                   animate={{ opacity: 1 }}
                   exit={{ opacity: 0 }}
                   transition={{ duration: 0.2 }}
-                  className="lg:hidden fixed inset-0 z-[55] bg-black/30 pointer-events-none"
+                  onClick={closeMobile}
+                  className="lg:hidden fixed inset-0 z-[55] bg-black/30 pointer-events-auto"
                 />
               )}
             </AnimatePresence>
 
             {/* Collapsed mini bar */}
-            {!mobileExpanded && (
+            {!mobileOpen && (
               <motion.button
                 key="mobile-mini-bar"
                 initial={{ opacity: 0, y: 20 }}

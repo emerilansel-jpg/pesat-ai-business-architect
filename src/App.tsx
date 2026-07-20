@@ -6,12 +6,14 @@ import ChatArea from './components/ChatArea';
 import InputBar from './components/InputBar';
 import Navbar from './components/Navbar';
 import ActivityPanel from './components/ActivityPanel';
-import { ActivityProvider, useActivity } from './contexts/ActivityContext';
-import { type Message } from './components/ChatMessage';
+import { ActivityProvider, useActivity, type ActivityIcon, type ActivityStage } from './contexts/ActivityContext';
+import { type Message, type MessageImage } from './components/ChatMessage';
 import Admin from './pages/Admin';
-import { sendMessage, webSearch } from './services/ai';
-import { getInlineVizPrompt } from './services/visualization';
-import { loadSettings, STEP_1_FOCUS } from './services/settings';
+import Version from './pages/Version';
+import { sendMessage, webSearch, generateImage } from './services/ai';
+import { getInlineVizPrompt, parseInlineImages, buildDallePrompt, getPollinationsUrl } from './services/visualization';
+import { loadSettings } from './services/settings';
+import { getActivityMessage, generateActivityMessages } from './services/activityMessages';
 import { MAIN_SYSTEM_PROMPT } from './services/mainPrompt';
 
 // Context for input focus
@@ -23,18 +25,34 @@ export const InputFocusContext = createContext<{
   increment: () => {},
 });
 
-const ACTIVITY = {
-  thinking: 'Sedang nyalain otak AI... 🤖',
-  searching: 'Sedang jelajah internet... 🌐',
-  analyzing: 'Sedang baca pola bisnis anda... 🔍',
-  crafting: 'Sedang racik jawaban keren... ✨',
-  image: 'Sedang gambar visual lucu... 🎨',
-  success: 'Selesai! Siap bantu lagi 🎉',
-  error: 'Ups, ada error. Coba lagi ya 😅',
-};
+const FIRST_MESSAGE_FOCUS = `\n\n## FOKUS PESAN PERTAMA (WAJIB)\nIni adalah pesan pertama dari user. JANGAN langsung kasih solusi final. JANGAN berpanjang-panjang.\nSapa user dengan ramah, perkenalkan diri sebagai Pesat AI Advisor, lalu tanya challenge utama bisnis mereka saat ini.\nAkhiri dengan pilihan multiple choice PERSIS seperti ini:\n[CHOICE:Tingkatkan omset miliaran|Hemat ratusan juta|Brand saya dipercaya & muncul di AI Search|Cegah Fraud ratusan juta|Business Intelligence|Forecast (prediksi) arah usaha|Lainnya (ketik sendiri)]\n\nPanjang maksimal 2-3 paragraf pendek.`;
 
-const FIRST_MESSAGE_FOCUS = `\n\n## FOKUS PESAN PERTAMA (WAJIB)\nIni adalah pesan pertama dari user. JANGAN langsung kasih solusi final. JANGAN berpanjang-panjang. Pilih salah satu:\n1. Jika user sudah sebutkan nama brand/bisnis: sapa, konfirmasi akan riset, lalu mulai riset ringkas dan berikan impression awal yang tajam.\n2. Jika user belum sebutkan brand/bisnis: sapa dengan ramah, jelaskan anda akan bantu baca bisnisnya, lalu minta nama brand, website, Instagram/TikTok/marketplace/LinkedIn, industri, dan produk/jasa utama.\n\nPanjang maksimal 3-4 paragraf pendek. Jangan pernah melebihi 4 paragraf di pesan pertama. Akhiri dengan [CHOICE:...] sesuai format instruksi.`;
+const BRAND_PROMPT = `\n\nBRAND DETECTION: If the user mentions their brand/business name, extract it and append [BRAND:Name] at the very end of your response. Do not mention this tag to the user.`;
 
+/** Show fun narrative logs while a promise is running. */
+function runNarrative<T>(
+  promise: Promise<T>,
+  logs: { message: string; icon: ActivityIcon }[],
+  addLog: (message: string, icon?: ActivityIcon) => void,
+  markLastDone: () => void
+): Promise<T> {
+  let index = 0;
+  if (logs.length > 0) {
+    addLog(logs[0].message, logs[0].icon);
+    index = 1;
+  }
+  const interval = window.setInterval(() => {
+    if (index < logs.length) {
+      markLastDone();
+      addLog(logs[index].message, logs[index].icon);
+      index++;
+    }
+  }, 1300);
+  return promise.finally(() => {
+    window.clearInterval(interval);
+    if (index > 0) markLastDone();
+  });
+}
 
 function ChatInterface() {
   const [messages, setMessages] = useState<Message[]>([]);
@@ -46,6 +64,7 @@ function ChatInterface() {
     useActivity();
   const lastUserMessageRef = useRef<string | null>(null);
   const isProcessingRef = useRef(false);
+  const activityOverridesRef = useRef<Partial<Record<ActivityStage, string>>>({});
 
   useEffect(() => {
     lastUserMessageRef.current = lastUserMessage;
@@ -61,11 +80,17 @@ function ChatInterface() {
       if (isProcessingRef.current) return;
 
       isProcessingRef.current = true;
-      setProcessing(true);
       clearLogs();
+      setProcessing(true);
       setShowWelcome(false);
 
       const trimmed = content.trim();
+      activityOverridesRef.current = {};
+      generateActivityMessages(trimmed)
+        .then((msgs) => {
+          if (msgs) activityOverridesRef.current = msgs;
+        })
+        .catch(() => {});
 
       // Add user message
       const userMsg: Message = {
@@ -78,7 +103,7 @@ function ChatInterface() {
       setLastUserMessage(trimmed);
       setIsTyping(true);
 
-      addLog(ACTIVITY.thinking, 'thinking');
+      addLog(getActivityMessage('thinking', trimmed, activityOverridesRef.current), 'thinking');
       setStage('thinking');
       const settings = loadSettings();
 
@@ -102,7 +127,7 @@ function ChatInterface() {
         try {
           if (settings.webSearchEnabled && settings.tavilyKey) {
             setStage('searching');
-            updateLastLog(ACTIVITY.searching, 'search');
+              updateLastLog(getActivityMessage('searching', trimmed, activityOverridesRef.current), 'search');
             const searchResult = await webSearch(trimmed);
             if (
               searchResult &&
@@ -119,39 +144,38 @@ function ChatInterface() {
               searchContext = `\n\n[WEB SEARCH RESULTS]\n${searchResult.answer || ''}\n${snippets}\n\nGunakan informasi di atas sebagai tambahan konteks. Jika informasi tidak relevan atau tidak bisa diverifikasi, abaikan dan berdasarkan analisis anda sendiri. Jangan mengklaim fakta yang tidak bisa dibuktikan.\n`;
             }
             setStage('analyzing');
-            updateLastLog(ACTIVITY.analyzing, 'analyze');
+            updateLastLog(getActivityMessage('analyzing', trimmed, activityOverridesRef.current), 'analyze');
           } else {
             setStage('analyzing');
-            updateLastLog(ACTIVITY.analyzing, 'analyze');
+            updateLastLog(getActivityMessage('analyzing', trimmed, activityOverridesRef.current), 'analyze');
           }
         } catch (searchErr) {
           // Ignore web search errors; proceed without it
           setStage('analyzing');
-          updateLastLog(ACTIVITY.analyzing, 'analyze');
+          updateLastLog(getActivityMessage('analyzing', trimmed, activityOverridesRef.current), 'analyze');
         }
 
         // Add inline visualization + choice system prompt
         const inlineVizPrompt = getInlineVizPrompt();
         const choicePrompt =
-          "\n\nCRITICAL: Every response MUST end with clickable multiple choice options using this exact format: [CHOICE:option 1|option 2|option 3]. Options must be concise (2-5 words each). Always include a 'Lainnya...' option as the last choice so the user can type freely.";
+          "\n\nCRITICAL: Every response MUST end with clickable multiple choice options using this exact format: [CHOICE:option 1|option 2|option 3]. Options must be concise (2-5 words each). Always include a 'Lainnya...' option as the last choice so the user can type freely. CRITICAL: If the user clicks a choice like 'Saya jawab semuanya sekarang' or 'Saya jawab satu per satu' without providing the actual data, do NOT assume the answers. Ask the user explicitly for each required value.";
 
-        // For the very first user message, combine the full MAIN_SYSTEM_PROMPT with the
-        // focused Step 1 instructions so the AI greets, gathers data, and follows the
-        // full persona/flow from the start.
+        // For the very first user message, use a focused opening that asks for the
+        // primary business challenge and supplies the exact choices. Skip the generic
+        // choice/instruction prompts so they don't conflict with the first-message choices.
         const isFirstUserMessage =
           messages.filter((m) => m.role === 'assistant').length === 0;
         const systemPrompt = isFirstUserMessage
           ? MAIN_SYSTEM_PROMPT +
             '\n\n' +
-            STEP_1_FOCUS +
             FIRST_MESSAGE_FOCUS +
-            (inlineVizPrompt || '') +
-            searchContext +
-            choicePrompt
+            BRAND_PROMPT +
+            searchContext
           : MAIN_SYSTEM_PROMPT +
             (inlineVizPrompt || '') +
             searchContext +
-            choicePrompt;
+            choicePrompt +
+            BRAND_PROMPT;
 
         const apiMessagesWithSystem: Array<{
           role: string;
@@ -163,14 +187,90 @@ function ChatInterface() {
         });
 
         setStage('crafting');
-        addLog(ACTIVITY.crafting, 'sparkle');
-        const controller = new AbortController();
-        const requestTimeout = window.setTimeout(() => controller.abort(), 60000);
-        const response = await sendMessage(apiMessagesWithSystem, {
-          signal: controller.signal,
-        });
-        window.clearTimeout(requestTimeout);
-        const aiText = response.content || 'Maaf, terjadi kesalahan.';
+        addLog(getActivityMessage('crafting', trimmed, activityOverridesRef.current), 'sparkle');
+
+        const isMobileDevice =
+          typeof navigator !== 'undefined' &&
+          /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(
+            navigator.userAgent
+          );
+        const requestTimeoutMs = isMobileDevice ? 30000 : 60000;
+        const maxAttempts = isMobileDevice ? 2 : 1;
+
+        async function tryGenerateResponse(
+          apiMessages: Array<{ role: string; content: string }>,
+          timeoutMs: number
+        ): Promise<{ text: string; images: MessageImage[] }> {
+          const controller = new AbortController();
+          const requestTimeout = window.setTimeout(
+            () => controller.abort(),
+            timeoutMs
+          );
+          const response = await sendMessage(apiMessages, {
+            signal: controller.signal,
+          });
+          window.clearTimeout(requestTimeout);
+          const text = response.content || 'Maaf, terjadi kesalahan.';
+
+          let generatedImages: MessageImage[] = [];
+          if (settings.autoImageGen) {
+            const { segments } = parseInlineImages(text);
+            const imageSegments = segments.filter(
+              (s): s is { type: 'image'; description: string } =>
+                s.type === 'image'
+            );
+            if (imageSegments.length > 0) {
+              setStage('image');
+              const imagePromises = imageSegments.map((seg, idx) => {
+                const prompt = buildDallePrompt(seg.description, settings.imageStyle);
+                return generateImage(prompt, 1)
+                  .then((result) => ({
+                    url: result.imageUrls[0] || getPollinationsUrl(seg.description, idx),
+                    description: seg.description,
+                  }))
+                  .catch(() => ({
+                    url: getPollinationsUrl(seg.description, idx),
+                    description: seg.description,
+                  }));
+              });
+              const narrativeLogs = [
+                { message: 'Contacting Jaka Sembung (Design expert)...', icon: 'image' as ActivityIcon },
+                { message: 'Meeting dimulai...', icon: 'meeting' as ActivityIcon },
+                { message: 'Ngopi dulu bentar...', icon: 'coffee' as ActivityIcon },
+                { message: 'Dipanggil istri...', icon: 'thinking' as ActivityIcon },
+                { message: 'Meeting hampir selesai...', icon: 'meeting' as ActivityIcon },
+                { message: 'Assign task ke Jaka Sembung untuk design...', icon: 'design' as ActivityIcon },
+                { message: 'Sri Asih dapat task review...', icon: 'code' as ActivityIcon },
+                { message: 'Tukang bubur depan juga dikasih task...', icon: 'deploy' as ActivityIcon },
+              ];
+              generatedImages = await runNarrative(Promise.all(imagePromises), narrativeLogs, addLog, markLastDone);
+            }
+          }
+          return { text, images: generatedImages };
+        }
+
+        let lastError: any = null;
+        let aiText = 'Maaf, terjadi kesalahan.';
+        let images: MessageImage[] = [];
+
+        for (let attempt = 1; attempt <= maxAttempts; attempt++) {
+          try {
+            const result = await tryGenerateResponse(apiMessagesWithSystem, requestTimeoutMs);
+            aiText = result.text;
+            images = result.images;
+            lastError = null;
+            break;
+          } catch (err) {
+            lastError = err;
+            console.error(`Chat error (attempt ${attempt}):`, err);
+            if (attempt < maxAttempts) {
+              addLog('Sinyal lemot, tim virtual coba ulang... 🔄', 'thinking');
+              setStage('thinking');
+            }
+          }
+        }
+
+        if (lastError) throw lastError;
 
         // Add AI message
         const aiMsg: Message = {
@@ -178,25 +278,29 @@ function ChatInterface() {
           role: 'assistant',
           content: aiText,
           timestamp: new Date(),
+          images,
         };
         setMessages((prev) => [...prev, aiMsg]);
 
         markLastDone();
         setStage('success');
-        finishLog(ACTIVITY.success, 'success');
+        finishLog(getActivityMessage('success', trimmed, activityOverridesRef.current), 'success');
       } catch (error: any) {
         console.error('Chat error:', error);
+        const errorMessage =
+          error?.name === 'AbortError' || error?.message?.includes('aborted')
+            ? 'Waktu pemrosesan habis. Silakan coba lagi.'
+            : 'Maaf, API key di server invalid atau quota habis. Coba ganti provider di pengaturan (icon gear) atau perbarui API key. Jika quota sudah cukup, kemungkinan key di .env server perlu di-update.';
         const errorMsg: Message = {
           id: (Date.now() + 1).toString(),
           role: 'assistant',
-          content:
-            'Maaf, terjadi kesalahan saat memproses pesan Anda. Silakan coba lagi.',
+          content: errorMessage,
           timestamp: new Date(),
         };
         setMessages((prev) => [...prev, errorMsg]);
         markLastDone();
         setStage('error');
-        finishLog(ACTIVITY.error, 'error');
+        finishLog(getActivityMessage('error', trimmed, activityOverridesRef.current), 'error');
       } finally {
         setIsTyping(false);
         setProcessing(false);
@@ -300,6 +404,7 @@ function App() {
         <Routes>
           <Route path="/" element={<ChatInterface />} />
           <Route path="/admin" element={<Admin />} />
+          <Route path="/version" element={<Version />} />
         </Routes>
       </ActivityProvider>
     </BrowserRouter>

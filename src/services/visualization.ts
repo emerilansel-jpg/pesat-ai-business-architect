@@ -1,27 +1,57 @@
 import { loadSettings, type AdvisorSettings } from './settings';
 
 // Prompt to generate inline image tags within the response
-const INLINE_VIZ_SYSTEM_PROMPT = `You are a UX and Data Visualization expert. When responding, insert image visualization markers at strategic points within your text to make the response more visual and easier to understand.
+const INLINE_VIZ_SYSTEM_PROMPT = `You are a UX and Data Visualization expert. When responding, insert image visualization markers at strategic points within your text to make the response feel like a well-designed article, NOT a slide deck with all images at the end.
 
-RULES:
-- Insert [IMAGE:brief description of what to visualize] BETWEEN paragraphs where a visual would help understanding
-- Place 1-3 image markers total, at natural breaking points in the text
-- The image description should be detailed (what charts, layout, colors) in English
-- Markers should be on their own line, between paragraphs
-- Example:
-  Paragraph about revenue...
+STRICT RULES:
+1. Place [IMAGE:...] markers at the TOP of one section, MIDDLE of another, and BOTTOM of another. Never cluster them.
+2. At least one image must appear before the halfway point of the response.
+3. Images should illustrate the point in the preceding paragraph, not summarize everything at the end.
+4. Markers must be on their own line, between paragraphs.
+5. The image description should be detailed (what charts, layout, colors) in English.
+6. Example article structure:
 
-  [IMAGE:Bar chart showing revenue growth from 10M to 50M over 5 years with purple gradient bars on dark navy background, clean minimalist business style]
+[IMAGE:Hero diagram of the overall AI solution concept, clean dark navy background with purple accents]
 
-  Paragraph about the analysis...
+Paragraph introducing the concept...
 
-  DO NOT put all images at the end. Scatter them throughout the response.`;
+Paragraph explaining the current problem...
+
+[IMAGE:Before/after comparison chart showing manual workflow vs AI automated workflow, KPI cards, minimal icons]
+
+Paragraph explaining the impact...
+
+Paragraph about implementation steps...
+
+[IMAGE:Workflow diagram with 4 steps, arrows, agent icons, dark theme]
+
+Final paragraph and CTA...
+
+FAILURE: If you put all images at the end, the response will be rejected.`;
 
 // Generate image URL via Pollinations.ai (free, no API key)
 function makePollinationsUrl(prompt: string, seed: number): string {
   const clean = prompt.replace(/\[|\]/g, '').substring(0, 900);
   const encoded = encodeURIComponent(clean);
   return `https://image.pollinations.ai/prompt/${encoded}?width=1024&height=1024&seed=${seed}&nologo=true&enhance=true`;
+}
+
+// Deterministic hash for consistent image URLs
+function hashString(str: string): number {
+  let hash = 0;
+  for (let i = 0; i < str.length; i++) {
+    hash = ((hash << 5) - hash) + str.charCodeAt(i);
+    hash |= 0;
+  }
+  return Math.abs(hash);
+}
+
+/** Build a deterministic Pollinations.ai URL from an image description */
+export function getPollinationsUrl(description: string, index: number): string {
+  const seed = hashString(description) + index * 1000;
+  const clean = description.replace(/\[|\]/g, '').substring(0, 900);
+  const encoded = encodeURIComponent(clean);
+  return `https://image.pollinations.ai/prompt/${encoded}?width=1024&height=1024&seed=${seed}&nologo=true&enhance=true&model=flux`;
 }
 
 export interface InlineImage {

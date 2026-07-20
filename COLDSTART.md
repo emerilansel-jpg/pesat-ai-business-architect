@@ -1,5 +1,135 @@
 # Coldstart — Project Memory
 
+## 2026-07-20 15:35 — v5.13.1 Fix 404 pesat.ai/advisor/ + Redirect + Version Page
+
+- **Type:** INFRA / FIX / DEPLOY
+- **Status:** COMPLETED
+- **Versi berjalan:** v5.13.1
+- **Files touched:**
+  - `D:\Claude Cowork\Pesat ai business architect\pesat-ai-business-architect\VERSIONS.md` (new single-source changelog)
+  - `D:\Claude Cowork\Pesat ai business architect\pesat-ai-business-architect\VERSION.md` (v5.13.1 entry)
+  - `D:\Claude Cowork\Pesat ai business architect\pesat-ai-business-architect\package.json` (version 5.13.1)
+  - `D:\Claude Cowork\Pesat ai business architect\pesat-ai-business-architect\src\pages\Version.tsx` (new /version page)
+  - `D:\Claude Cowork\Pesat ai business architect\pesat-ai-business-architect\src\data\versions.ts` (auto-generated from VERSIONS.md)
+  - `D:\Claude Cowork\Pesat ai business architect\pesat-ai-business-architect\src\App.tsx` (/version route)
+  - `D:\Claude Cowork\Pesat ai business architect\pesat-ai-business-architect\src\components\Navbar.tsx` (version badge link)
+  - `D:\Claude Cowork\Pesat ai business architect\pesat-ai-business-architect\src\pages\Admin.tsx` (version link)
+  - `D:\Claude Cowork\Pesat ai business architect\pesat-ai-business-architect\scripts\generate-versions.js` (generator)
+  - `D:\Claude Cowork\Pesat ai business architect\pesat-ai-business-architect\scripts\add-apps-redirect.mjs` (Caddy redirect helper)
+  - `D:\Claude Cowork\Pesat ai business architect\pesat-ai-business-architect\scripts\final-deploy.js` (existing deployment script)
+  - `D:\Claude Cowork\Pesat ai business architect\pesat-ai-business-architect\.gitignore` (ignore pesat-advisor-pass)
+  - Cloudflare DNS: `pesat.ai` → `148.230.103.98` (A record), `apps.pesat.ai` → `148.230.103.98` (A record)
+  - VPS Caddyfile: added `apps.pesat.ai` redirect blocks for `/advisor/*` → `https://pesat.ai/advisor/`
+- **Key decisions:**
+  - Root cause of 404: `pesat.ai` DNS had a read-only AAAA record (`100::`) attached to the `pesat-ai-homepage` Worker custom domain. The Worker custom domain was detached via the account-level Workers Domains API, then the AAAA record became deletable and was replaced with an A record to the VPS.
+  - `apps.pesat.ai` was still a CNAME to an old Cloudflare Tunnel; replaced with an A record to the VPS so the same Caddy instance serves both hostnames.
+  - Added explicit `apps.pesat.ai` Caddy host blocks before the wildcard `*.pesat.ai` blocks to issue a 301 redirect for `/advisor/*` paths to the canonical `pesat.ai` URL.
+  - Rebuilt the app with `VITE_BASE_PATH=/advisor/`, deployed `dist/` to `/var/lib/docker/volumes/pesat-control-plane_builds/_data/apps/advisor`, and restarted Caddy.
+  - Introduced `VERSIONS.md` + auto-generated `src/data/versions.ts` + `/version` page, linked from the Navbar and Admin panel.
+- **Known issues:** none
+- **Blockers:** none
+- **Next step:** Monitor `pesat.ai/advisor/`, `apps.pesat.ai/advisor/`, and the `/version` page; update server `.env` keys when user provides them.
+- **Inspector:** PASSED
+- **Backup location:** `D:\Claude Cowork\Pesat ai business architect\backups\pesat-ai-business-architect-2026-07-20_fix-404-pre`
+- **coldstart.md stored at:** `D:\Claude Cowork\Pesat ai business architect\pesat-ai-business-architect\COLDSTART.md`
+- **Browser used:** Edge (CDP, https://pesat.ai/advisor/, https://pesat.ai/advisor/version, https://pesat.ai/advisor/admin, https://apps.pesat.ai/advisor/)
+
+## 2026-07-21 10:00 — v5.13.0 Latest Feedback Fixes (Lainnya, Language, Mobile Layout, CTA)
+
+- **Type:** CODING / DEPLOY
+- **Status:** COMPLETED
+- **Files touched:**
+  - `D:\Claude Cowork\Pesat ai business architect\pesat-ai-business-architect\src\components\ChatMessage.tsx` (filter Lainnya variants, section spacing, CTA button)
+  - `D:\Claude Cowork\Pesat ai business architect\pesat-ai-business-architect\src\components\ActivityPanel.tsx` (mobile sheet 55vh, CSS variable for chat padding)
+  - `D:\Claude Cowork\Pesat ai business architect\pesat-ai-business-architect\src\components\ChatArea.tsx` (use --mobile-panel-height CSS variable)
+  - `D:\Claude Cowork\Pesat ai business architect\pesat-ai-business-architect\src\services\mainPrompt.ts` (aku/kamu rule, CTA tag format)
+  - `D:\Claude Cowork\Pesat ai business architect\pesat-ai-business-architect\src\services\settings.ts` (BASE_GUIDELINE_STYLES aku/kamu, step 6 CTA tag)
+  - `D:\Claude Cowork\Pesat ai business architect\pesat-ai-business-architect\src\services\visualization.ts` (stronger article-like image placement)
+  - `D:\Claude Cowork\Pesat ai business architect\pesat-ai-business-architect\src\App.tsx` (clearer API key/quota error message)
+  - `D:\Claude Cowork\Pesat ai business architect\pesat-ai-business-architect\package.json` (version 5.13.0)
+  - `D:\Claude Cowork\Pesat ai business architect\pesat-ai-business-architect\VERSION.md` (v5.13.0 changelog)
+  - `D:\Claude Cowork\Pesat ai business architect\pesat-ai-business-architect\coldstart.md` (this entry)
+- **Key decisions:**
+  - `displayChoices` filter now removes any choice starting with "lainnya" or containing "ketik sendiri" to prevent duplicate buttons.
+  - Prompts and guidelines explicitly enforce "aku/kamu" or "saya/anda" and forbid "gue/lo", "gw/lu".
+  - Mobile activity panel sheet reduced to 55vh and writes `--mobile-panel-height` to the document root. ChatArea applies this as bottom padding so the last message stays visible above the panel.
+  - Image placement prompts strengthened with explicit article structure example and a "FAILURE" penalty clause.
+  - AI message markdown sections now have larger spacing and border-top dividers before H1/H2 headings.
+  - WhatsApp CTA uses `[CTA:https://wa.me/6281290401240]` tag and is rendered as a green clickable button in the chat bubble.
+  - API error message now suggests checking provider/API key settings or updating the server `.env`.
+- **Blockers:**
+  - Server `.env` still contains old/invalid API keys (DeepSeek returns invalid key; OpenAI returns insufficient quota). End-to-end chat cannot be fully verified until the `.env` file is updated with working keys.
+- **Next step:**
+  - User should provide working OpenAI/DeepSeek/Tavily keys so I can update the server `.env` file, OR verify/admin-update keys themselves in the dashboard.
+- **Inspector:** PASSED (TypeScript clean; UI verified via build and deployment screenshots; chat API verified failing due to invalid keys)
+- **Backup location:** none (incremental edits on existing workspace)
+- **coldstart.md stored at:** `D:\Claude Cowork\Pesat ai business architect\coldstart.md`
+- **Browser used:** Edge (CDP, `https://pesat.ai/advisor/`)
+
+
+## 2026-07-20 20:30 — v5.12.0 Feedback Fixes (Fun-tainment, Images, Mobile, Prompt)
+
+- **Type:** CODING / DEPLOY
+- **Status:** COMPLETED
+- **Files touched:**
+  - `D:\Claude Cowork\Pesat ai business architect\pesat-ai-business-architect\src\services\activityMessages.ts` (funnier, more varied status templates + richer LLM prompt)
+  - `D:\Claude Cowork\Pesat ai business architect\pesat-ai-business-architect\src\components\ActivityPanel.tsx` (particle trail, stage badges, progress sheen, background glow)
+  - `D:\Claude Cowork\Pesat ai business architect\pesat-ai-business-architect\src\services\visualization.ts` (article-like image placement rules)
+  - `D:\Claude Cowork\Pesat ai business architect\pesat-ai-business-architect\src\services\mainPrompt.ts` (image placement + no-assumed-answers rules)
+  - `D:\Claude Cowork\Pesat ai business architect\pesat-ai-business-architect\src\components\AIAvatar.tsx` (blinking P letter)
+  - `D:\Claude Cowork\Pesat ai business architect\pesat-ai-business-architect\src\components\ChatMessage.tsx` (user star blink + section spacing)
+  - `D:\Claude Cowork\Pesat ai business architect\pesat-ai-business-architect\src\App.tsx` (mobile timeout, retry loop, no-assume choice prompt)
+  - `D:\Claude Cowork\Pesat ai business architect\pesat-ai-business-architect\package.json` (version 5.12.0)
+  - `D:\Claude Cowork\Pesat ai business architect\pesat-ai-business-architect\VERSION.md` (v5.12.0 changelog)
+  - `D:\Claude Cowork\Pesat ai business architect\pesat-ai-business-architect\coldstart.md` (this entry)
+- **Key decisions:**
+  - Activity Panel templates expanded to 10 messages per stage; LLM prompt now asks for game-like team notifications with character references (Jaka Sembung, Gundala, Sri Asih, tukang bubur).
+  - Added `BotTrail`, `StageBadge`, diagonal progress sheen, and pulsing radial background glow to make the panel feel more like a premium game UI.
+  - Strengthened inline visualization prompt to require images at TOP, MIDDLE, or BOTTOM of sections and explicitly forbid clustering images at the end.
+  - Added strict prompt rule: AI must NOT assume answers when the user only confirms intent (e.g., "Saya jawab semuanya sekarang"); it must ask for the actual values.
+  - Mobile requests now use a 30s timeout and one automatic retry, with a clearer error message suggesting to switch to DeepSeek or check API key/OpenAI quota.
+  - AI "P" avatar blinks; user avatar gets a small star-blink sparkle.
+  - AI message markdown sections now have more vertical spacing (`space-y-3`, paragraph/list margins).
+- **Blockers:**
+  - End-to-end verification depends on the user's OpenAI/DeepSeek quota and mobile network conditions. If mobile still fails, capture the exact console/network error for further diagnosis.
+- **Next step:**
+  - User should test the full chat flow on mobile and desktop, especially the "Saya jawab semuanya sekarang" choice and image placement, and report any remaining issues.
+- **Inspector:** PASSED (TypeScript clean; UI verified via build and deployment screenshots; chat logic verified through code review)
+- **Backup location:** none (incremental edits on existing workspace)
+- **coldstart.md stored at:** `D:\Claude Cowork\Pesat ai business architect\coldstart.md`
+- **Browser used:** Edge (CDP, `https://pesat.ai/advisor/`)
+
+
+## 2026-07-20 19:00 — v5.11.0 UI/UX Polish (Continue Feedback)
+
+- **Type:** CODING / DEPLOY
+- **Status:** COMPLETED
+- **Files touched:**
+  - `D:\Claude Cowork\Pesat ai business architect\pesat-ai-business-architect\src\components\ChatMessage.tsx` (stronger mobile multiple-choice button contrast)
+  - `D:\Claude Cowork\Pesat ai business architect\pesat-ai-business-architect\src\components\AIAvatar.tsx` (brand "P" badge in chat)
+  - `D:\Claude Cowork\Pesat ai business architect\pesat-ai-business-architect\src\components\WelcomeScreen.tsx` (brand "P" badge on welcome avatar)
+  - `D:\Claude Cowork\Pesat ai business architect\pesat-ai-business-architect\src\components\ActivityPanel.tsx` (floating sparkles, stage pulse, spring log items, glowing progress bar)
+  - `D:\Claude Cowork\Pesat ai business architect\pesat-ai-business-architect\src\App.tsx` (LLM-generated activity messages with fallback)
+  - `D:\Claude Cowork\Pesat ai business architect\pesat-ai-business-architect\src\services\activityMessages.ts` (override map support)
+  - `D:\Claude Cowork\Pesat ai business architect\pesat-ai-business-architect\package.json` (version 5.11.0)
+  - `D:\Claude Cowork\Pesat ai business architect\pesat-ai-business-architect\VERSION.md` (v5.11.0 changelog)
+  - `D:\Claude Cowork\Pesat ai business architect\pesat-ai-business-architect\coldstart.md` (this entry)
+- **Key decisions:**
+  - Mobile multiple-choice buttons now use `bg-white`, `text-slate-950`, `border-slate-400`, `break-words`, and larger `min-h-[52px]` touch targets for readability.
+  - AI avatar switches from `Zap`/`Sparkles` icons to a centered "P" letter on both the welcome screen and the chat AI avatar; keeps the existing gradient, glow, and online dot.
+  - Activity Panel adds `FloatingSparkles` (orbiting colored dots), `PulseRing` (radial stage-change pulse), spring transitions on `ActivityLogItem`, and a pulsing glow overlay on the progress bar during processing.
+  - `generateActivityMessages` is called at the start of each chat request; its results are stored in a ref and passed to `getActivityMessage`. If the LLM call fails or returns empty, the existing template generator is used automatically.
+  - The first `thinking` log still appears immediately so the panel opens without waiting for the LLM.
+- **Blockers:**
+  - OpenAI API quota is still `insufficient_quota` (per v5.10.0 notes), so end-to-end chat and LLM activity-message generation cannot be fully verified in production. DeepSeek key remains active for text flow testing if needed.
+- **Next step:**
+  - User should add OpenAI credit / API key with quota. After that, verify the first-message choices, the LLM-generated activity messages, and image sync on `https://pesat.ai/advisor/`.
+- **Inspector:** PASSED (TypeScript clean; UI verified via build and deployment screenshots; chat end-to-end blocked by API quota)
+- **Backup location:** none (incremental edits on existing workspace)
+- **coldstart.md stored at:** `D:\Claude Cowork\Pesat ai business architect\coldstart.md`
+- **Browser used:** Edge (CDP, `https://pesat.ai/advisor/`)
+
+
 ## 2026-07-10 12:05 — Initial Setup
 
 - **Type:** SETUP

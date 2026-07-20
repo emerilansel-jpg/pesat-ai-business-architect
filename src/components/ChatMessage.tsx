@@ -3,10 +3,11 @@ import { motion } from 'framer-motion';
 import { Copy, Check, RefreshCw, ImageOff, Wand2, Loader2 } from 'lucide-react';
 import { marked } from 'marked';
 import AIAvatar from './AIAvatar';
-import { parseInlineImages, buildDallePrompt } from '../services/visualization';
+import { parseInlineImages, buildDallePrompt, getPollinationsUrl } from '../services/visualization';
 import { generateImage } from '../services/ai';
 import { loadSettings } from '../services/settings';
 import { useActivity } from '../contexts/ActivityContext';
+import { useBrand } from '../contexts/BrandContext';
 
 marked.setOptions({
   breaks: true,
@@ -15,6 +16,7 @@ marked.setOptions({
 
 export interface MessageImage {
   url: string;
+  description?: string;
   type?: string;
   subject?: string;
 }
@@ -36,6 +38,26 @@ interface ChatMessageProps {
 
 const easeOutExpo: [number, number, number, number] = [0.16, 1, 0.3, 1];
 
+/** Extract [BRAND:Nama] markers from text */
+function parseBrandMarker(text: string): { cleanText: string; brandName: string | null } {
+  const regex = /\[BRAND:([^\]]+)\]/g;
+  let brandName: string | null = null;
+  const cleanText = text.replace(regex, (_match, name) => {
+    if (!brandName) brandName = name.trim();
+    return '';
+  });
+  return { cleanText, brandName };
+}
+
+/** Extract brand initials (first 2 letters or first letters of 2 words) */
+function getBrandInitials(name: string): string {
+  const words = name.trim().split(/\s+/).filter(Boolean);
+  if (words.length === 1) {
+    return words[0].slice(0, 2).toUpperCase();
+  }
+  return (words[0][0] + (words[1][0] || '')).toUpperCase();
+}
+
 /** Parse [CHOICE:a|b|c] tags from text */
 function parseChoices(text: string): { cleanText: string; choices: string[] } {
   const choiceRegex = /\[CHOICE:([^\]]+)\]/g;
@@ -51,22 +73,16 @@ function parseChoices(text: string): { cleanText: string; choices: string[] } {
   return { cleanText, choices };
 }
 
-/** Deterministic hash for consistent image URLs */
-function hashString(str: string): number {
-  let hash = 0;
-  for (let i = 0; i < str.length; i++) {
-    hash = ((hash << 5) - hash) + str.charCodeAt(i);
-    hash |= 0;
+/** Parse [CTA:url] tags from text */
+function parseCTA(text: string): { cleanText: string; ctaUrl: string | null } {
+  const ctaRegex = /\[CTA:([^\]]+)\]/g;
+  let ctaUrl: string | null = null;
+  let match;
+  while ((match = ctaRegex.exec(text)) !== null) {
+    ctaUrl = match[1].trim();
   }
-  return Math.abs(hash);
-}
-
-/** Generate deterministic Pollinations URL — same desc = same URL */
-function getPollinationsUrl(description: string, index: number): string {
-  const seed = hashString(description) + index * 1000;
-  const clean = description.replace(/\[|\]/g, '').substring(0, 900);
-  const encoded = encodeURIComponent(clean);
-  return `https://image.pollinations.ai/prompt/${encoded}?width=1024&height=1024&seed=${seed}&nologo=true&enhance=true&model=flux`;
+  const cleanText = text.replace(ctaRegex, '').trim();
+  return { cleanText, ctaUrl };
 }
 
 const ChatMessage = memo(function ChatMessage({
@@ -83,18 +99,48 @@ const ChatMessage = memo(function ChatMessage({
   const [imageError, setImageError] = useState<Record<number, boolean>>({});
   const [manualRequested, setManualRequested] = useState<Record<number, boolean>>({});
   const { addLog, finishLog } = useActivity();
+  const { brandName, setBrandName } = useBrand();
   const isAI = message.role === 'assistant';
 
-  // Parse choices from content
+  // Parse brand marker and choices from content
+  const brandParsed = parseBrandMarker(message.content);
   const { cleanText, choices } = isAI
-    ? parseChoices(message.content)
-    : { cleanText: message.content, choices: [] };
-  const displayChoices = choices.filter((c) => c !== 'Lainnya...');
+    ? parseChoices(brandParsed.cleanText)
+    : { cleanText: brandParsed.cleanText, choices: [] };
+  const displayChoices = choices.filter((c) => {
+    const lower = c.trim().toLowerCase();
+    return !lower.startsWith('lainnya') && !lower.includes('ketik sendiri');
+  });
+  const { cleanText: ctaCleanText, ctaUrl } = isAI
+    ? parseCTA(cleanText)
+    : { cleanText, ctaUrl: null };
+
+  // If AI mentions a brand name, remember it for the user avatar
+  useEffect(() => {
+    if (isAI && brandParsed.brandName) {
+      setBrandName(brandParsed.brandName);
+    }
+  }, [isAI, brandParsed.brandName, setBrandName]);
 
   // Parse inline images for AI messages
   const { segments } = useMemo(() => {
-    return isAI ? parseInlineImages(cleanText) : { segments: [] };
-  }, [cleanText, isAI]);
+    return isAI ? parseInlineImages(ctaCleanText) : { segments: [] };
+  }, [ctaCleanText, isAI]);
+
+  // Pre-fill auto-generated image URLs from the message.
+  useEffect(() => {
+    if (!message.images || !isAI) return;
+    const urls: Record<number, string> = {};
+    let imageIdx = 0;
+    segments.forEach((seg, i) => {
+      if (seg.type === 'image') {
+        const img = message.images![imageIdx];
+        if (img) urls[i] = img.url;
+        imageIdx++;
+      }
+    });
+    setImageUrls(urls);
+  }, [message.images, segments, isAI]);
 
   const generateOneImage = useCallback(
     async (index: number, description: string) => {
@@ -129,11 +175,13 @@ const ChatMessage = memo(function ChatMessage({
     [generateOneImage]
   );
 
-  // Generate images asynchronously, falling back to Pollinations
+  // Generate images asynchronously, falling back to Pollinations.
+  // Skip if the message already carries pre-generated images from App.tsx.
   useEffect(() => {
     let cancelled = false;
 
     async function generateImages() {
+      if (message.images) return;
       const settings = loadSettings();
       const generating: Record<number, boolean> = {};
       segments.forEach((seg, i) => {
@@ -223,7 +271,7 @@ const ChatMessage = memo(function ChatMessage({
                 return (
                   <div
                     key={segIdx}
-                    className="markdown-body text-[14px] md:text-[15px] text-slate-900 leading-relaxed lg:text-[#CBD5E1]"
+                    className="markdown-body text-[14px] md:text-[15px] text-slate-900 leading-relaxed lg:text-[#CBD5E1] space-y-4 [&_p]:mb-4 [&_ul]:my-4 [&_ol]:my-4 [&_li]:mb-2 [&_h1]:mt-6 [&_h1]:pt-4 [&_h1]:border-t [&_h1]:border-slate-300 [&_h1]:lg:border-slate-700 [&_h2]:mt-5 [&_h2]:pt-3 [&_h2]:border-t [&_h2]:border-slate-300 [&_h2]:lg:border-slate-700 [&_h3]:mt-4"
                     dangerouslySetInnerHTML={{
                       __html: marked.parse(seg.content) as string,
                     }}
@@ -326,6 +374,18 @@ const ChatMessage = memo(function ChatMessage({
               );
             })}
 
+            {/* CTA Button (WhatsApp) */}
+            {ctaUrl && (
+              <a
+                href={ctaUrl}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="mt-4 inline-flex items-center gap-2 px-5 py-3 bg-[#22C55E] hover:bg-[#16A34A] text-white rounded-xl font-semibold text-[14px] shadow-[0_4px_16px_rgba(34,197,94,0.3)] transition-all active:scale-95"
+              >
+                Chat WhatsApp
+              </a>
+            )}
+
             {/* ===== CHOICE BUTTONS — onClick (reliable) ===== */}
             {choices.length > 0 && onChoiceClick && (
               <div className="mt-4 pt-3 border-t border-[rgba(124,58,237,0.15)]">
@@ -344,7 +404,7 @@ const ChatMessage = memo(function ChatMessage({
                         ease: easeOutExpo,
                       }}
                       onClick={() => onChoiceClick(choice)}
-                      className="w-full lg:w-auto lg:flex-1 px-4 py-3 min-h-[48px] bg-white border border-slate-200 rounded-xl text-[14px] font-medium text-slate-900 shadow-sm hover:bg-slate-50 hover:border-slate-300 active:scale-[0.95] transition-all duration-200 cursor-pointer select-none touch-manipulation lg:px-5 lg:py-3.5 lg:min-h-[52px] lg:bg-gradient-to-r lg:from-[rgba(124,58,237,0.15)] lg:to-[rgba(139,92,246,0.1)] lg:border-2 lg:border-[rgba(124,58,237,0.4)] lg:font-semibold lg:text-[#F8FAFC] lg:shadow-[0_2px_8px_rgba(124,58,237,0.15)] lg:hover:bg-gradient-to-r lg:hover:from-[#7C3AED] lg:hover:to-[#8B5CF6] lg:hover:border-[#7C3AED] lg:hover:shadow-[0_4px_20px_rgba(124,58,237,0.4)] lg:hover:text-white"
+                      className="w-full lg:w-auto lg:flex-1 px-4 py-3.5 min-h-[52px] bg-white border-2 border-slate-400 rounded-xl text-[14px] font-bold text-slate-950 shadow-sm break-words leading-snug hover:bg-slate-50 active:scale-[0.95] transition-all duration-200 select-none touch-manipulation lg:px-5 lg:py-3.5 lg:min-h-[52px] lg:bg-gradient-to-r lg:from-[#7C3AED] lg:to-[#8B5CF6] lg:border-2 lg:border-[#7C3AED] lg:font-semibold lg:text-white lg:shadow-[0_2px_8px_rgba(124,58,237,0.3)] lg:hover:bg-gradient-to-r lg:hover:from-[#6D28D9] lg:hover:to-[#7C3AED] lg:hover:border-[#6D28D9] lg:hover:shadow-[0_4px_20px_rgba(124,58,237,0.4)]"
                     >
                       {choice}
                     </motion.button>
@@ -359,7 +419,7 @@ const ChatMessage = memo(function ChatMessage({
                       ease: easeOutExpo,
                     }}
                     onClick={() => onChoiceClick('Lainnya...')}
-                    className="w-full lg:w-auto lg:flex-1 px-4 py-3 min-h-[48px] bg-slate-50 border border-slate-200 border-dashed rounded-xl text-[14px] font-medium text-slate-600 hover:bg-slate-100 hover:border-slate-300 active:scale-[0.95] transition-all duration-200 cursor-pointer select-none touch-manipulation lg:px-5 lg:py-3.5 lg:min-h-[52px] lg:bg-[rgba(124,58,237,0.05)] lg:border-2 lg:border-[rgba(124,58,237,0.2)] lg:font-medium lg:text-[#A78BFA] lg:hover:bg-[rgba(124,58,237,0.15)] lg:hover:border-[rgba(124,58,237,0.5)]"
+                    className="w-full lg:w-auto lg:flex-1 px-4 py-3.5 min-h-[52px] bg-slate-100 border-2 border-slate-400 border-dashed rounded-xl text-[14px] font-bold text-slate-900 break-words leading-snug hover:bg-slate-200 active:scale-[0.95] transition-all duration-200 select-none touch-manipulation lg:px-5 lg:py-3.5 lg:min-h-[52px] lg:bg-[rgba(124,58,237,0.15)] lg:border-2 lg:border-[rgba(124,58,237,0.5)] lg:font-semibold lg:text-white lg:hover:bg-[rgba(124,58,237,0.25)] lg:hover:border-[rgba(124,58,237,0.7)]"
                   >
                     Lainnya... (ketik sendiri)
                   </motion.button>
@@ -413,8 +473,18 @@ const ChatMessage = memo(function ChatMessage({
       transition={{ duration: 0.35, ease: easeOutExpo }}
       className="flex items-start gap-2.5 md:gap-3 w-full flex-row-reverse"
     >
-      <div className="w-9 h-9 rounded-full bg-gradient-to-br from-[#7C3AED] to-[#8B5CF6] flex items-center justify-center flex-shrink-0 shadow-[0_0_20px_rgba(124,58,237,0.3)]">
-        <span className="text-xs font-semibold text-white">U</span>
+      <div className="relative flex-shrink-0">
+        <div className="w-9 h-9 rounded-full bg-gradient-to-br from-[#7C3AED] to-[#8B5CF6] flex items-center justify-center shadow-[0_0_20px_rgba(124,58,237,0.3)]">
+          <span className="text-[10px] md:text-xs font-semibold text-white truncate max-w-[28px]">
+            {brandName ? getBrandInitials(brandName) : 'U'}
+          </span>
+        </div>
+        <motion.div
+          className="absolute -top-0.5 -right-0.5 w-2 h-2 rounded-full bg-[#FCD34D]"
+          style={{ boxShadow: '0 0 6px #FCD34D' }}
+          animate={{ scale: [0, 1, 0], opacity: [0, 1, 0] }}
+          transition={{ duration: 1.2, repeat: Infinity, repeatDelay: 2.5, ease: 'easeInOut' }}
+        />
       </div>
       <div className="flex flex-col gap-1 min-w-0 items-end max-w-[85%] md:max-w-[80%]">
         <div className="bg-gradient-to-br from-[#7C3AED] to-[#8B5CF6] rounded-[18px_18px_4px_18px] px-4 py-3 shadow-[0_2px_8px_rgba(124,58,237,0.18)] lg:shadow-[0_4px_16px_rgba(124,58,237,0.25)]">

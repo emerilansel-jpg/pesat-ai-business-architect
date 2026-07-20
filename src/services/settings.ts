@@ -30,7 +30,8 @@ const BASE_GUIDELINE_STYLES =
   '- Bahasa default adalah Bahasa Indonesia. Balas dalam Bahasa Indonesia kecuali user jelas-jelas menulis pesannya dalam English.\n' +
   '- Selalu ikuti bahasa yang dipakai user. Indonesia → Bahasa Indonesia; English → English; campur → natural campur dengan prioritas Indonesia.\n' +
   '- Gaya bahasa: mudah dimengerti, casual tapi sopan, conversational, cerdas, tanpa fluff.\n' +
-  '- Gunakan kata "saya" untuk mewakili http://pesat.ai dan kata "anda" untuk user.\n' +
+  '- Gunakan kata "saya" untuk mewakili http://pesat.ai dan kata "anda" untuk user. Atau gunakan "aku/kamu" ketika gaya conversational lebih natural.\n' +
+  '- JANGAN pernah gunakan "gue/lo", "gw/lu", atau bahasa gaul sejenisnya. Tetap profesional-casual.\n' +
   '- Terdengar seperti business advisor + AI architect: tajam, smart, observatif, bisa "membaca bisnis".\n' +
   '- Di hampir setiap respons, selipkan minimal salah satu dari: tebakan cerdas, pola umum di bisnis serupa, business wisdom singkat, atau insight yang terasa "wah, kok dia bisa tahu ya?".\n' +
   '- Jangan sok formal. Jangan bertele-tele. Jangan overclaim. Jangan berputar-putar.\n' +
@@ -163,11 +164,11 @@ export const DEFAULT_STEP_PROMPTS: StepPrompt[] = [
       '   - Berapa jumlah karyawan saat ini?\n' +
       '   - Berapa kira-kira yearly revenue/omset tahunan?\n' +
       '2. Setelah user menjawab, beri respons singkat yang menegaskan keseriusan peluang.\n' +
-      '3. Arahkan ke: https://wa.me/6281290401240\n' +
+      '3. Arahkan ke WhatsApp dengan format [CTA:https://wa.me/6281290401240]. Tombol ini akan dirender sebagai button klik.\n' +
       '4. Jika user jawab "pikir dulu/belum", tanyakan concern utama dan berikan reassurance ringan.\n\n' +
       '## FORMAT\n' +
       '- Paragraf pendek, bullet points untuk benefit/counter.\n' +
-      '- Akhiri dengan: "Dari jawaban anda, saya makin yakin ini layak diwujudkan. Supaya kita bisa bahas implementasi yang paling tepat untuk bisnis anda, lanjutkan ke WhatsApp saya di: https://wa.me/6281290401240"\n' +
+      '- Akhiri dengan: "Dari jawaban anda, saya makin yakin ini layak diwujudkan. Supaya kita bisa bahas implementasi yang paling tepat untuk bisnis anda, lanjutkan ke WhatsApp saya di: [CTA:https://wa.me/6281290401240]"\n' +
       '- Jika user belum siap, akhiri dengan [CHOICE:ya, saya mau lanjut|saya masih ada pertanyaan|belum, mungkin nanti].\n' +
       '- Tidak perlu [IMAGE:] di step ini.',
     costPer1K: '$0.03',
@@ -184,12 +185,12 @@ export const DEFAULT_SETTINGS: AdvisorSettings = {
   deepseekKey: '',
   tavilyKey: '',
 
-  autoImageGen: false,
+  autoImageGen: true,
   imageStyle: 'professional',
   maxImagesPerResponse: 1,
   webSearchEnabled: true,
   stepPrompts: [...DEFAULT_STEP_PROMPTS],
-  promptVersion: 3,
+  promptVersion: 4,
 };
 
 export function loadSettings(): AdvisorSettings {
@@ -197,10 +198,11 @@ export function loadSettings(): AdvisorSettings {
     const saved = localStorage.getItem('advisor_settings');
     if (saved) {
       const parsed = JSON.parse(saved);
-      // Reset stepPrompts if prompt schema has changed
+      // Reset stepPrompts and image preference if schema has changed
       if (!parsed.stepPrompts || parsed.stepPrompts.length !== 6 || parsed.promptVersion !== DEFAULT_SETTINGS.promptVersion) {
         parsed.stepPrompts = [...DEFAULT_STEP_PROMPTS];
         parsed.promptVersion = DEFAULT_SETTINGS.promptVersion;
+        parsed.autoImageGen = DEFAULT_SETTINGS.autoImageGen;
       }
       return { ...DEFAULT_SETTINGS, ...parsed };
     }

@@ -1,6 +1,5 @@
 import { memo, useMemo } from 'react';
 import { motion } from 'framer-motion';
-import { Sparkles } from 'lucide-react';
 
 const easeOutExpo: [number, number, number, number] = [0.16, 1, 0.3, 1];
 
@@ -64,7 +63,7 @@ const WelcomeScreen = memo(function WelcomeScreen() {
         className="w-16 h-16 md:w-20 md:h-20 rounded-full bg-gradient-to-br from-[#7C3AED] to-[#8B5CF6] flex items-center justify-center relative z-10"
         style={{ boxShadow: '0 0 28px rgba(124, 58, 237, 0.25)' }}
       >
-        <Sparkles className="w-8 h-8 md:w-10 md:h-10 text-white" />
+        <span className="text-[32px] md:text-[40px] font-bold text-white">P</span>
       </motion.div>
 
       {/* Heading */}

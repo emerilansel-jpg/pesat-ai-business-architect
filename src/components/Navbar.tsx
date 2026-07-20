@@ -2,6 +2,7 @@ import { memo } from 'react';
 import { Sparkles, Settings } from 'lucide-react';
 import { Link } from 'react-router-dom';
 import LogoIcon from './LogoIcon';
+import { versions } from '../data/versions';
 
 const Navbar = memo(function Navbar() {
   return (
@@ -40,6 +41,15 @@ const Navbar = memo(function Navbar() {
             title="Admin Settings"
           >
             <Settings className="w-[18px] h-[18px]" />
+          </Link>
+
+          {/* Version link */}
+          <Link
+            to="/version"
+            className="flex items-center justify-center h-7 px-2 rounded-full text-[10px] font-semibold text-[#A78BFA] bg-[rgba(124,58,237,0.15)] hover:bg-[rgba(124,58,237,0.25)] transition-all duration-200 max-lg:text-[#7C3AED] max-lg:bg-[rgba(124,58,237,0.1)]"
+            title="Version History"
+          >
+            v{versions[0]?.version}
           </Link>
         </div>
       </div>

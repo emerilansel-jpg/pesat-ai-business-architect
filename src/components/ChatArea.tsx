@@ -77,7 +77,10 @@ const ChatArea = memo(function ChatArea({ messages, isTyping, onRetry, onChoiceC
         ref={scrollRef}
         className="relative z-[1] h-full overflow-y-auto scrollbar-chat bg-white lg:bg-transparent"
       >
-        <div className="max-w-[900px] mx-auto px-3 py-3 lg:px-4 lg:py-8 flex flex-col gap-2.5 lg:gap-4">
+        <div
+          className="max-w-[900px] mx-auto px-3 py-3 lg:px-4 lg:py-8 flex flex-col gap-2.5 lg:gap-4"
+          style={{ paddingBottom: 'var(--mobile-panel-height, 0)' }}
+        >
           <AnimatePresence>
             {messages.map((message, index) => (
               <ChatMessage

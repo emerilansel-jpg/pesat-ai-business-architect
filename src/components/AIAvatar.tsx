@@ -1,4 +1,5 @@
 import { memo } from 'react';
+import { motion } from 'framer-motion';
 
 interface AIAvatarProps {
   size?: 'sm' | 'md';
@@ -7,7 +8,6 @@ interface AIAvatarProps {
 
 const AIAvatar = memo(function AIAvatar({ size = 'md', isTyping = false }: AIAvatarProps) {
   const sizeClasses = size === 'sm' ? 'w-9 h-9' : 'w-[36px] h-[36px]';
-  const textSize = size === 'sm' ? 'text-[10px]' : 'text-xs';
   const dotSize = size === 'sm' ? 'w-2 h-2' : 'w-2.5 h-2.5';
   const dotPosition = size === 'sm' ? '-bottom-0.5 -right-0.5' : '-bottom-0.5 -right-0.5';
 
@@ -18,7 +18,14 @@ const AIAvatar = memo(function AIAvatar({ size = 'md', isTyping = false }: AIAva
           isTyping ? 'animate-avatar-glow' : ''
         }`}
       >
-        <span className={`${textSize} font-semibold text-white tracking-wide`}>AI</span>
+        <motion.span
+          className={`font-bold text-white ${size === 'sm' ? 'text-[14px]' : 'text-[16px]'}`}
+          animate={{ scaleY: [1, 0.1, 1] }}
+          transition={{ duration: 0.15, repeat: Infinity, repeatDelay: 3.5, ease: 'easeInOut' }}
+          style={{ display: 'inline-block', transformOrigin: 'center' }}
+        >
+          P
+        </motion.span>
       </div>
       {/* Online dot */}
       <div

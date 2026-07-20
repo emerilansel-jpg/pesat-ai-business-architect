@@ -1,5 +1,5 @@
 import { useState, useEffect, useCallback } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, Link } from 'react-router-dom';
 import { motion } from 'framer-motion';
 import {
   ArrowLeft,
@@ -29,6 +29,7 @@ import {
   type AdvisorSettings,
   type StepPrompt,
 } from '../services/settings';
+import { versions } from '../data/versions';
 
 const ADMIN_PASSWORD = 'jdp123';
 const easeOutExpo: [number, number, number, number] = [0.16, 1, 0.3, 1];
@@ -212,6 +213,12 @@ export default function Admin() {
             <span className="text-sm font-medium hidden sm:inline">Back</span>
           </button>
           <h1 className="text-base font-semibold text-[#F8FAFC]">Settings</h1>
+          <Link
+            to="/version"
+            className="text-xs font-semibold text-[#A78BFA] hover:text-[#8B5CF6] transition-colors"
+          >
+            v{versions[0]?.version}
+          </Link>
           <button
             onClick={handleLogout}
             className="flex items-center gap-1.5 text-[#64748B] hover:text-red-400 transition-colors min-h-[44px] px-2 -mr-2 text-sm"

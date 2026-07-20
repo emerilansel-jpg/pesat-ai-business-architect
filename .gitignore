@@ -19,3 +19,7 @@ server.log
 
 # Backup folders
 backups/
+
+# Deployment credentials / temp helpers
+scripts/pesat-advisor-pass/
+scripts/inspect-vps.mjs
