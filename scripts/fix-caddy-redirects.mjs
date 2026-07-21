@@ -9,51 +9,8 @@ const caddyfile = `{
     auto_https off
 }
 
-apps.pesat.ai:80 {
-    @root_apps_80 path_regexp ^/$
-    handle @root_apps_80 {
-        redir * https://pesat.ai/advisor/ permanent
-    }
-    handle /advisor/* {
-        redir https://pesat.ai{uri} permanent
-    }
-    handle /advisor {
-        redir https://pesat.ai/advisor/ permanent
-    }
-    root * /builds/apps
-    handle_path /api/* {
-        reverse_proxy ${HOST_IP}:3002
-    }
-    handle {
-        try_files {path} /index.html
-        file_server
-    }
-}
-
 *.pesat.ai:80 {
     root * /builds/{labels.2}
-    handle_path /api/* {
-        reverse_proxy ${HOST_IP}:3002
-    }
-    handle {
-        try_files {path} /index.html
-        file_server
-    }
-}
-
-apps.pesat.ai:443 {
-    tls /opt/pesat-control-plane/certs/origin.crt /opt/pesat-control-plane/certs/origin.key
-    @root_apps_443 path_regexp ^/$
-    handle @root_apps_443 {
-        redir * https://pesat.ai/advisor/ permanent
-    }
-    handle /advisor/* {
-        redir https://pesat.ai{uri} permanent
-    }
-    handle /advisor {
-        redir https://pesat.ai/advisor/ permanent
-    }
-    root * /builds/apps
     handle_path /api/* {
         reverse_proxy ${HOST_IP}:3002
     }
@@ -145,37 +102,6 @@ control.pesat.ai:443 {
         try_files {path} /universal.html
     }
 }
-
-pesat.ai:80 {
-    @root_pesat_80 path_regexp ^/$
-    handle @root_pesat_80 {
-        redir * /advisor/ permanent
-    }
-    root * /builds/apps
-    handle_path /api/* {
-        reverse_proxy ${HOST_IP}:3002
-    }
-    handle {
-        try_files {path} /index.html
-        file_server
-    }
-}
-
-pesat.ai:443 {
-    tls /opt/pesat-control-plane/certs/origin.crt /opt/pesat-control-plane/certs/origin.key
-    @root_pesat_443 path_regexp ^/$
-    handle @root_pesat_443 {
-        redir * /advisor/ permanent
-    }
-    root * /builds/apps
-    handle_path /api/* {
-        reverse_proxy ${HOST_IP}:3002
-    }
-    handle {
-        try_files {path} /index.html
-        file_server
-    }
-}
 `;
 
 async function main() {
@@ -192,7 +118,7 @@ async function main() {
   }
 
   await ssh.execCommand('docker restart pesat-control-plane-caddy-1');
-  console.log('Caddyfile rewritten with correct root redirects');
+  console.log('Caddyfile simplified to wildcard + control blocks');
   ssh.dispose();
 }
 
