@@ -19,6 +19,7 @@ export interface AdvisorSettings {
   webSearchEnabled: boolean;
   stepPrompts: StepPrompt[];
   promptVersion: number;
+  updatedAt?: string;
 }
 
 // 6 steps (greeting removed — chat starts directly)
@@ -177,7 +178,7 @@ export const DEFAULT_STEP_PROMPTS: StepPrompt[] = [
 
 
 export const DEFAULT_SETTINGS: AdvisorSettings = {
-  textProvider: 'openai',
+  textProvider: 'deepseek',
   imageProvider: 'openai-image',
   openaiModel: 'gpt-4o',
   deepseekModel: 'deepseek-chat',
