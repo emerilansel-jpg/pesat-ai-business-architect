@@ -75,10 +75,6 @@ function ChatInterface() {
     fetchServerConfig().then((serverConfig) => {
       if (!serverConfig) return;
       const localSettings = loadSettings();
-      const serverUpdated = new Date(serverConfig.updatedAt).getTime();
-      const localUpdated = localSettings.updatedAt ? new Date(localSettings.updatedAt).getTime() : 0;
-      if (serverUpdated <= localUpdated) return;
-
       const next = {
         ...localSettings,
         textProvider: serverConfig.textProvider,
