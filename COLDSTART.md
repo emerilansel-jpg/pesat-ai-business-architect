@@ -1,5 +1,25 @@
 # Coldstart — Project Memory
 
+## 2026-07-21 03:35 — Follow-up: root pesat.ai blank, fix root redirect
+
+- **Type:** INFRA / FIX
+- **Status:** COMPLETED
+- **Versi berjalan:** v5.13.1
+- **Files touched:**
+  - `D:\Claude Cowork\Pesat ai business architect\pesat-ai-business-architect\scripts\fix-caddy-redirects.mjs` (updated)
+  - VPS Caddyfile: `/opt/pesat-control-plane/caddy/Caddyfile`
+- **Key decisions:**
+  - Root cause: `pesat.ai/` (path `/`) was served by the fallback `handle` block. Because the app is a React SPA with `BrowserRouter basename="/advisor"`, the root path rendered nothing, so the page looked blank.
+  - Fix: added a `path_regexp ^/$` named matcher in each `pesat.ai` and `apps.pesat.ai` Caddy host block, with `redir * /advisor/ permanent` (for pesat.ai) or `redir * https://pesat.ai/advisor/ permanent` (for apps.pesat.ai).
+  - Important lesson: inside a Caddy `handle` block, the `redir` directive still requires an explicit wildcard matcher (`redir * ...`) or it silently treats the target as a path matcher.
+- **Known issues:** none
+- **Blockers:** none
+- **Next step:** Monitor root redirects; decide if user wants to restore the Next.js homepage at root or keep the app-only setup.
+- **Inspector:** PASSED
+- **Backup location:** `D:\Claude Cowork\Pesat ai business architect\backups\pesat-ai-business-architect-2026-07-20_fix-404-pre`
+- **coldstart.md stored at:** `D:\Claude Cowork\Pesat ai business architect\pesat-ai-business-architect\COLDSTART.md`
+- **Browser used:** Edge (CDP, https://pesat.ai/)
+
 ## 2026-07-20 15:35 — v5.13.1 Fix 404 pesat.ai/advisor/ + Redirect + Version Page
 
 - **Type:** INFRA / FIX / DEPLOY
