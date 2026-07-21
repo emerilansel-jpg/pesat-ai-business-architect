@@ -12,7 +12,7 @@ import Admin from './pages/Admin';
 import Version from './pages/Version';
 import { sendMessage, webSearch, generateImage } from './services/ai';
 import { getInlineVizPrompt, parseInlineImages, buildDallePrompt, getPollinationsUrl } from './services/visualization';
-import { loadSettings, saveSettings, DEFAULT_SETTINGS } from './services/settings';
+import { loadSettings, saveSettings } from './services/settings';
 import { fetchServerConfig } from './services/serverConfig';
 import { getActivityMessage, generateActivityMessages } from './services/activityMessages';
 import { MAIN_SYSTEM_PROMPT } from './services/mainPrompt';
