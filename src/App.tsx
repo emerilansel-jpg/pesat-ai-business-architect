@@ -26,7 +26,7 @@ export const InputFocusContext = createContext<{
   increment: () => {},
 });
 
-const FIRST_MESSAGE_FOCUS = `\n\n## FOKUS PESAN PERTAMA (WAJIB)\nIni adalah pesan pertama dari user. JANGAN langsung kasih solusi final. JANGAN berpanjang-panjang.\nSapa user dengan ramah, perkenalkan diri sebagai Pesat AI Advisor, lalu tanya challenge utama bisnis mereka saat ini.\nAkhiri dengan pilihan multiple choice PERSIS seperti ini:\n[CHOICE:Tingkatkan omset miliaran|Hemat ratusan juta|Brand saya dipercaya & muncul di AI Search|Cegah Fraud ratusan juta|Business Intelligence|Forecast (prediksi) arah usaha|Lainnya (ketik sendiri)]\n\nPanjang maksimal 2-3 paragraf pendek.`;
+const FIRST_MESSAGE_FOCUS = `\n\n## FOKUS PESAN PERTAMA (WAJIB)\nIni adalah pesan pertama dari user.\n\n### JIKA USER MENYEBUTKAN BRAND ATAU NAMA BISNIS\nLakukan DEEP RESEARCH sekarang juga pakai web search result yang sudah disertakan di konteks. Berikan:\n- impression tajam tentang brand mereka (positioning, produk, target market),\n- kompetitor utama dan market dynamics,\n- interesting facts yang relevan,\n- beberapa kemungkinan challenge bisnis mereka.\nPisahkan: fakta / estimasi / hipotesis. Buat user terkesan dengan kedalaman riset anda.\n\n### JIKA USER BELUM MENYEBUT BRAND\nJANGAN langsung kasih solusi final. JANGAN berpanjang-panjang.\nSapa user dengan ramah, perkenalkan diri sebagai Pesat AI Advisor, lalu tanya challenge utama bisnis mereka saat ini.\nAkhiri dengan pilihan multiple choice PERSIS seperti ini:\n[CHOICE:Tingkatkan omset miliaran|Hemat ratusan juta|Brand saya dipercaya & muncul di AI Search|Cegah Fraud ratusan juta|Business Intelligence|Forecast (prediksi) arah usaha|Lainnya (ketik sendiri)]\nPanjang maksimal 2-3 paragraf pendek.`;
 
 const BRAND_PROMPT = `\n\nBRAND DETECTION: If the user mentions their brand/business name, extract it and append [BRAND:Name] at the very end of your response. Do not mention this tag to the user.`;
 
@@ -150,7 +150,7 @@ function ChatInterface() {
         // Optional web search context
         let searchContext = '';
         try {
-          if (settings.webSearchEnabled && settings.tavilyKey) {
+          if (settings.webSearchEnabled) {
             setStage('searching');
               updateLastLog(getActivityMessage('searching', trimmed, activityOverridesRef.current), 'search');
             const searchResult = await webSearch(trimmed);
@@ -160,13 +160,13 @@ function ChatInterface() {
             ) {
               const snippets =
                 searchResult.results
-                  ?.slice(0, 3)
+                  ?.slice(0, 6)
                   .map(
                     (r: any) =>
                       `- ${r.title}: ${r.content || r.snippet || r.url}`
                   )
                   .join('\n') || '';
-              searchContext = `\n\n[WEB SEARCH RESULTS]\n${searchResult.answer || ''}\n${snippets}\n\nGunakan informasi di atas sebagai tambahan konteks. Jika informasi tidak relevan atau tidak bisa diverifikasi, abaikan dan berdasarkan analisis anda sendiri. Jangan mengklaim fakta yang tidak bisa dibuktikan.\n`;
+              searchContext = `\n\n[WEB SEARCH RESULTS untuk riset brand/bisnis user]\n${searchResult.answer || ''}\n${snippets}\n\nGunakan informasi di atas sebagai bahan riset awal tentang brand/bisnis user. Bedakan dengan jelas: fakta yang bisa diverifikasi vs estimasi vs hipotesis anda. Jika informasi tidak relevan, abaikan dan based on analisis anda sendiri.\n`;
             }
             setStage('analyzing');
             updateLastLog(getActivityMessage('analyzing', trimmed, activityOverridesRef.current), 'analyze');
