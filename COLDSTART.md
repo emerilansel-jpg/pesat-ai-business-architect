@@ -1,21 +1,19 @@
 # Coldstart — Project Memory
 
-# Coldstart — Project Memory
-
 ## 2026-07-21 04:05 — Architecture split: homepage on pesat.ai, advisor on pesat.ai/advisor/, apps.pesat.ai for ninjago (pending content)
 
 - **Type:** INFRA / DEPLOY
 - **Status:** PARTIAL (homepage + advisor done; apps.pesat.ai ninjago content pending)
 - **Versi berjalan:** v5.13.1
 - **Files touched:**
-  - `D:\Claude Cowork\Pesat ai business architect\pesat-ai-business-architect\scripts\fix-caddy-redirects.mjs` (simplified Caddyfile to wildcard only)
+  - `D:\Claude Cowork\Pesat ai business architect\pesat-ai-business-architect\scripts\fix-caddy-redirects.mjs` (simplified Caddyfile to wildcard only; deleted `scripts/add-apps-redirect.mjs`)
   - Cloudflare DNS: deleted A record `pesat.ai` → VPS
   - Cloudflare Worker: attached `pesat.ai` custom domain to `pesat-ai-homepage` service
-  - Cloudflare Worker: deployed `pesat-advisor-proxy` worker with route `pesat.ai/advisor/*` → `https://apps.pesat.ai/advisor/`
-  - VPS Caddyfile: `/opt/pesat-control-plane/caddy/Caddyfile` now only has `*.pesat.ai` wildcard and `control.pesat.ai` blocks
+  - Cloudflare Worker: deployed `pesat-advisor-proxy` worker with route `pesat.ai/advisor*` → `https://apps.pesat.ai/advisor/`
 - **Key decisions:**
   - `pesat.ai/` now serves the Next.js homepage (`Pesat.AI | Buktikan Sendiri dalam 5 Menit`) from the `pesat-ai-homepage` Worker.
   - `pesat.ai/advisor/*` is proxied by the `pesat-advisor-proxy` Worker to `https://apps.pesat.ai/advisor/`, preserving the URL in the browser.
+  - `pesat.ai/advisor` (without trailing slash) is redirected to `/advisor/` by the Worker.
   - `apps.pesat.ai` Caddy config simplified to the wildcard `*.pesat.ai` block; `apps.pesat.ai/advisor/` is served from `/builds/apps/advisor/` for the proxy.
   - `apps.pesat.ai/` currently serves `/builds/apps/index.html` (Business Architect). The user wants this to be ninjago/friends, but the ninjago project files are not present on the VPS or local workspace.
 - **Known issues:**
@@ -29,7 +27,7 @@
 - **Inspector:** PARTIAL (homepage + advisor verified; ninjago cannot be verified without content)
 - **Backup location:** `D:\Claude Cowork\Pesat ai business architect\backups\pesat-ai-business-architect-2026-07-20_fix-404-pre`
 - **coldstart.md stored at:** `D:\Claude Cowork\Pesat ai business architect\pesat-ai-business-architect\COLDSTART.md`
-- **Browser used:** Edge (CDP, https://pesat.ai/, https://pesat.ai/advisor/)
+- **Browser used:** Edge (CDP, https://pesat.ai/, https://pesat.ai/advisor/, https://pesat.ai/advisor?x=1)
 
 ## 2026-07-21 03:35 — Follow-up: root pesat.ai blank, fix root redirect
 
