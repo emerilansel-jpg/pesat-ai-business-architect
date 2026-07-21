@@ -1,5 +1,44 @@
 # Coldstart — Project Memory
 
+## 2026-07-21 17:30 — Server-side config & API key sync
+
+- **Type:** CODING / FEATURE
+- **Status:** COMPLETED
+- **Versi berjalan:** v5.14.0
+- **Files touched:**
+  - `server/configStore.cjs` (new server helper for config and keys)
+  - `server/index.ts` (local dev endpoints `/api/config`, `/api/keys`, server key fallback)
+  - `scripts/advisor-proxy.js` (production endpoints `/config`, `/keys`, server key fallback)
+  - `scripts/deploy-advisor.mjs` (uploads `configStore.cjs` alongside proxy)
+  - `src/services/serverConfig.ts` (client helper to fetch config)
+  - `src/services/settings.ts` (default provider deepseek, optional `updatedAt`)
+  - `src/services/ai.ts` (no longer sends API keys from client)
+  - `src/App.tsx` (merges server config on startup)
+  - `src/pages/Admin.tsx` (save/load server config and keys)
+  - `VERSIONS.md`, `VERSION.md`, `package.json`, `src/data/versions.ts` (v5.14.0)
+- **Key decisions:**
+  - Adopted "Cara C" hybrid: provider/model/preferences sync via server, API keys stay server-side only.
+  - Default text provider switched to DeepSeek because the server-side OpenAI key currently has `insufficient_quota`.
+  - Client no longer stores or sends API keys; admin UI sends them to `/api/keys` to be stored on the VPS.
+  - Shared `server/configStore.cjs` is uploaded to `/var/www/advisor-configStore.cjs` for production; the production proxy require path is rewritten during deploy.
+- **Known issues:**
+  - OpenAI on the server still uses the existing env key which has exceeded quota. To use OpenAI, update the OpenAI key via admin (Save API Keys to Server).
+- **Blockers:** none
+- **Next step:**
+  - Monitor usage on mobile and desktop.
+  - If user wants OpenAI, enter a valid OpenAI key in admin and click Save API Keys to Server.
+- **Inspector:** PASSED
+  - Unit tests: `test-configStore.mjs`, `test-api-config-local.mjs`, `test-proxy-config.mjs` all pass.
+  - Build: `npm run build` passes.
+  - Deploy: `npm run deploy:advisor` passes; health checks OK.
+  - Production `/api/config` returns DeepSeek default; production `/api/chat` with DeepSeek returns a response.
+- **Backup location:**
+  - Local: `D:\Claude Cowork\Pesat ai business architect\pesat-ai-business-architect\backups\2026-07-21_server-config-sync`
+  - VPS: `/root/backups/pesat-vps-2026-07-21T10-26-31` and `/root/backups/pesat-vps-2026-07-21T10-29-54`
+- **coldstart.md stored at:** `D:\Claude Cowork\Pesat ai business architect\pesat-ai-business-architect\COLDSTART.md`
+
+---
+
 ## 2026-07-21 14:00 — Robust deployment setup: backups, isolated scripts, and AI-agent documentation
 
 - **Type:** INFRA / DOCS / SAFEGUARDS
