@@ -1,5 +1,7 @@
-// Proxy is served from same domain via nginx reverse proxy at /api/
-const PROXY_URL = '/api';
+// Proxy is served from the same domain under the app's base path (e.g. /advisor/api/).
+// Using a relative URL keeps it correct whether base is "/" (dev) or "/advisor/" (prod).
+const BASE_PATH = import.meta.env.BASE_URL || '/';
+const PROXY_URL = (BASE_PATH.endsWith('/') ? BASE_PATH : BASE_PATH + '/') + 'api';
 import { loadSettings } from './settings';
 
 export async function sendMessage(

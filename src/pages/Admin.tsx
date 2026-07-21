@@ -32,6 +32,9 @@ import {
 import { versions } from '../data/versions';
 import { fetchServerConfig } from '../services/serverConfig';
 
+const BASE_PATH = import.meta.env.BASE_URL || '/';
+const PROXY_URL = (BASE_PATH.endsWith('/') ? BASE_PATH : BASE_PATH + '/') + 'api';
+
 const ADMIN_PASSWORD = 'jdp123';
 const easeOutExpo: [number, number, number, number] = [0.16, 1, 0.3, 1];
 
@@ -197,7 +200,7 @@ export default function Admin() {
   const saveServerConfig = useCallback(async () => {
     try {
       const { openaiKey, deepseekKey, tavilyKey, ...config } = settings;
-      const res = await fetch('/api/config', {
+      const res = await fetch(`${PROXY_URL}/config`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ adminPassword: ADMIN_PASSWORD, config }),
@@ -213,7 +216,7 @@ export default function Admin() {
 
   const saveServerKeys = useCallback(async () => {
     try {
-      const res = await fetch('/api/keys', {
+      const res = await fetch(`${PROXY_URL}/keys`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({

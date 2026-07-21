@@ -9,7 +9,9 @@ export interface ServerConfig extends Omit<AdvisorSettings, 'openaiKey' | 'deeps
 
 export async function fetchServerConfig(): Promise<ServerConfig | null> {
   try {
-    const res = await fetch('/api/config');
+    const basePath = import.meta.env.BASE_URL || '/';
+    const proxyUrl = (basePath.endsWith('/') ? basePath : basePath + '/') + 'api';
+    const res = await fetch(`${proxyUrl}/config`);
     if (!res.ok) throw new Error(`HTTP ${res.status}`);
     return await res.json();
   } catch (e) {
