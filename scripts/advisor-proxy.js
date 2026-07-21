@@ -1,5 +1,6 @@
 const http = require('http');
 const dns = require('dns');
+const configStore = require('../server/configStore.cjs');
 
 // Prefer IPv4 to avoid connect timeouts when IPv6 resolution fails.
 dns.setDefaultResultOrder('ipv4first');
@@ -61,15 +62,55 @@ const server = http.createServer(async (req, res) => {
         return;
       }
 
+      if (path === '/config') {
+        if (req.method === 'GET') {
+          configStore.ensureConfig();
+          const config = configStore.loadConfig();
+          res.writeHead(200, CORS);
+          res.end(JSON.stringify({
+            ...config,
+            hasOpenAiKey: configStore.hasKey('openai'),
+            hasDeepseekKey: configStore.hasKey('deepseek'),
+            hasTavilyKey: configStore.hasKey('tavily'),
+          }));
+          return;
+        }
+        if (req.method === 'POST') {
+          const data = JSON.parse(body);
+          if (!configStore.verifyAdminPassword(data.adminPassword)) {
+            res.writeHead(401, CORS);
+            res.end(JSON.stringify({ error: 'Unauthorized' }));
+            return;
+          }
+          configStore.saveConfig(data.config);
+          res.writeHead(200, CORS);
+          res.end(JSON.stringify({ success: true }));
+          return;
+        }
+      }
+
+      if (path === '/keys') {
+        if (req.method === 'POST') {
+          const data = JSON.parse(body);
+          if (!configStore.verifyAdminPassword(data.adminPassword)) {
+            res.writeHead(401, CORS);
+            res.end(JSON.stringify({ error: 'Unauthorized' }));
+            return;
+          }
+          configStore.saveKeys(data.keys);
+          res.writeHead(200, CORS);
+          res.end(JSON.stringify({ success: true }));
+          return;
+        }
+      }
+
       if (path === '/chat') {
         const data = JSON.parse(body);
         const provider = data.provider || 'openai';
         const apiUrl = provider === 'deepseek'
           ? 'https://api.deepseek.com/v1/chat/completions'
           : 'https://api.openai.com/v1/chat/completions';
-        const apiKey = provider === 'deepseek'
-          ? (data.apiKey || DEEPSEEK_API_KEY)
-          : (data.apiKey || OPENAI_API_KEY);
+        const apiKey = data.apiKey || configStore.getKey(provider);
 
         if (!apiKey) {
           res.writeHead(400, CORS);
@@ -117,7 +158,7 @@ const server = http.createServer(async (req, res) => {
 
       if (path === '/image') {
         const data = JSON.parse(body);
-        const apiKey = data.apiKey || OPENAI_API_KEY;
+        const apiKey = data.apiKey || configStore.getKey('openai');
 
         if (!apiKey) {
           res.writeHead(400, CORS);
@@ -162,7 +203,7 @@ const server = http.createServer(async (req, res) => {
 
       if (path === '/search') {
         const data = JSON.parse(body);
-        const apiKey = data.apiKey || TAVILY_API_KEY;
+        const apiKey = data.apiKey || configStore.getKey('tavily');
         if (!apiKey) {
           res.writeHead(400, CORS);
           res.end(JSON.stringify({ error: 'Missing Tavily API key' }));
