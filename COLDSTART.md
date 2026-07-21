@@ -1,6 +1,33 @@
 # Coldstart — Project Memory
 
-## 2026-07-21 04:05 — Architecture split: homepage on pesat.ai, advisor on pesat.ai/advisor/, apps.pesat.ai for ninjago (pending content)
+## 2026-07-21 14:00 — Robust deployment setup: backups, isolated scripts, and AI-agent documentation
+
+- **Type:** INFRA / DOCS / SAFEGUARDS
+- **Status:** COMPLETED (scripts + docs created; ninjago content still pending)
+- **Versi berjalan:** v5.13.1
+- **Files touched:**
+  - `D:\Claude Cowork\Pesat ai business architect\pesat-ai-business-architect\scripts\backup-vps.mjs` (improved: backup, list, restore with confirmation)
+  - `D:\Claude Cowork\Pesat ai business architect\pesat-ai-business-architect\scripts\deploy-advisor.mjs` (new: only deploys Business Architect, never touches other apps)
+  - `D:\Claude Cowork\Pesat ai business architect\pesat-ai-business-architect\scripts\deploy-static-app.mjs` (new: generic static app deployer, e.g. ninjago)
+  - `D:\Claude Cowork\Pesat ai business architect\pesat-ai-business-architect\scripts\health-check.mjs` (new: verify production URLs)
+  - `D:\Claude Cowork\Pesat ai business architect\pesat-ai-business-architect\AGENTS.md` (new: AI-agent safe-operation guide)
+- **Key decisions:**
+  - Any infra change must be preceded by `node scripts/backup-vps.mjs backup`.
+  - `deploy-advisor.mjs` only uploads `dist/` to `/builds/apps/advisor/`; it no longer overwrites `/builds/apps/index.html` or other apps.
+  - `deploy-static-app.mjs` is the generic entry point for new apps (ninjago, games, landing page). It deploys to `/builds/apps/<app>/` and handles `landing` as a special root page.
+  - `health-check.mjs` verifies homepage, advisor app, redirects, and version page.
+  - `AGENTS.md` documents architecture, safe operations, and dangerous operations to avoid for future AI agents.
+- **Known issues:**
+  - `apps.pesat.ai/` still shows Business Architect because ninjago project files are missing.
+- **Blockers:**
+  - Still need user to provide ninjago/friends project files to replace `/builds/apps/index.html`.
+- **Next step:**
+  - User provides ninjago/friends project; deploy with `node scripts/deploy-static-app.mjs ninjago <folder>`.
+  - Or run `node scripts/health-check.mjs` after any deploy to verify.
+- **Inspector:** PARTIAL (docs/scripts created; ninjago cannot be verified without content)
+- **Backup location:** `D:\Claude Cowork\Pesat ai business architect\backups\pesat-ai-business-architect-2026-07-20_fix-404-pre`
+- **coldstart.md stored at:** `D:\Claude Cowork\Pesat ai business architect\pesat-ai-business-architect\COLDSTART.md`
+
 
 - **Type:** INFRA / DEPLOY
 - **Status:** PARTIAL (homepage + advisor done; apps.pesat.ai ninjago content pending)
