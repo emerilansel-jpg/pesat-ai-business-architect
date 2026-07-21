@@ -16,6 +16,8 @@ const CONFIG = {
   localProxy: path.resolve(__dirname, 'advisor-proxy.js'),
   remoteBuildDir: '/var/lib/docker/volumes/pesat-control-plane_builds/_data/apps/advisor',
   remoteProxy: '/var/www/advisor-proxy.js',
+  localConfigStore: path.resolve(__dirname, '..', 'server', 'configStore.cjs'),
+  remoteConfigStore: '/var/www/advisor-configStore.cjs',
   apiPort: 3002,
   healthPaths: [
     { url: 'https://pesat.ai/advisor/', expected: 'Pesat AI Business Architect' },
@@ -89,7 +91,20 @@ async function deployAdvisor() {
     });
 
     console.log('[3/5] Uploading proxy...');
-    await ssh.putFile(CONFIG.localProxy, CONFIG.remoteProxy);
+    const tempProxyPath = path.join(__dirname, '..', 'dist', 'advisor-proxy-prod.js');
+    let proxySource = fs.readFileSync(CONFIG.localProxy, 'utf8');
+    proxySource = proxySource.replace(
+      "require('../server/configStore.cjs')",
+      "require('./advisor-configStore.cjs')"
+    );
+    fs.writeFileSync(tempProxyPath, proxySource);
+    await ssh.putFile(tempProxyPath, CONFIG.remoteProxy);
+    fs.unlinkSync(tempProxyPath);
+    console.log('  Proxy uploaded.');
+
+    console.log('[3.5/5] Uploading config store helper...');
+    await ssh.putFile(CONFIG.localConfigStore, CONFIG.remoteConfigStore);
+    console.log('  Helper uploaded.');
 
     console.log('[4/5] Managing proxy service with PM2...');
     const pm2Status = await ssh.execCommand('pm2 describe advisor-proxy');
