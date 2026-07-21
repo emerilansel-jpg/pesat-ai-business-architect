@@ -66,13 +66,14 @@ function ChatInterface() {
   const lastUserMessageRef = useRef<string | null>(null);
   const isProcessingRef = useRef(false);
   const activityOverridesRef = useRef<Partial<Record<ActivityStage, string>>>({});
+  const serverConfigPromiseRef = useRef(fetchServerConfig());
 
   useEffect(() => {
     lastUserMessageRef.current = lastUserMessage;
   }, [lastUserMessage]);
 
   useEffect(() => {
-    fetchServerConfig().then((serverConfig) => {
+    serverConfigPromiseRef.current.then((serverConfig) => {
       if (!serverConfig) return;
       const localSettings = loadSettings();
       const next = {
@@ -128,6 +129,7 @@ function ChatInterface() {
 
       addLog(getActivityMessage('thinking', trimmed, activityOverridesRef.current), 'thinking');
       setStage('thinking');
+      await serverConfigPromiseRef.current;
       const settings = loadSettings();
 
       try {
