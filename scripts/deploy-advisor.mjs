@@ -38,7 +38,8 @@ function runCommand(cmd, args, options) {
 
 async function backup() {
   console.log('Running pre-deploy backup...');
-  await runCommand('node', [path.join(__dirname, 'backup-vps.mjs'), 'backup']);
+  const backupScript = path.join(__dirname, 'backup-vps.mjs');
+  await runCommand('node', [`"${backupScript}"`, 'backup']);
 }
 
 async function connect() {
@@ -67,7 +68,10 @@ async function deployAdvisor() {
   // Optional: auto-build if dist is missing or stale
   if (!fs.existsSync(CONFIG.localDist)) {
     console.log('dist/ missing; running npm run build...');
-    await runCommand('npm', ['run', 'build'], { cwd: CONFIG.localProject });
+    await runCommand('npm', ['run', 'build'], {
+      cwd: CONFIG.localProject,
+      env: { ...process.env, VITE_BASE_PATH: '/advisor/' },
+    });
   }
   if (!fs.existsSync(CONFIG.localProxy)) {
     throw new Error(`Proxy file missing: ${CONFIG.localProxy}`);
