@@ -1,3 +1,11 @@
+## v5.14.0 — 21 Jul 2026 — FEATURE
+- Moved provider, model, image preference, web search, and step prompts to a server-side config file so desktop and mobile stay in sync.
+- Moved API keys (OpenAI, DeepSeek, Tavily) to a server-side keys file; they are no longer stored in the browser.
+- Added `/api/config` and `/api/keys` endpoints to both the local dev server and the production proxy.
+- Added "Save Config to Server", "Load from Server", and "Save API Keys to Server" buttons to the admin panel.
+- Changed the default text provider to DeepSeek to avoid the current OpenAI quota issue on the server-side key.
+- Updated the deploy script to upload the shared config store helper alongside the proxy.
+
 ## v5.13.1 — 20 Jul 2026 — FIX
 - Fixed 404 on `https://pesat.ai/advisor/` by restoring the Cloudflare DNS A record to the VPS origin.
 - Removed the Cloudflare Worker custom domain (`pesat-ai-homepage`) from `pesat.ai` so requests reach the VPS Caddy server.

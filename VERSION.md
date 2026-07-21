@@ -1,5 +1,29 @@
 # Version History
 
+## v5.14.0 — 2026-07-21
+- **Type:** FEATURE
+- **Changes:**
+  - Moved provider, model, image preference, web search, and step prompts to a server-side config file (`/var/www/advisor-config.json`) so desktop and mobile stay in sync.
+  - Moved API keys (OpenAI, DeepSeek, Tavily) to a server-side keys file (`/var/www/advisor-keys.json`); keys are no longer stored in browser localStorage.
+  - Added `GET /api/config`, `POST /api/config`, and `POST /api/keys` endpoints to both the local dev server and the production proxy.
+  - Added "Save Config to Server", "Load from Server", and "Save API Keys to Server" buttons to the admin panel.
+  - The app now fetches server config on startup and uses it if newer than local settings.
+  - Changed the default text provider to DeepSeek to avoid the current OpenAI quota issue on the server-side key.
+  - Updated `scripts/deploy-advisor.mjs` to upload the shared `server/configStore.cjs` helper to the VPS.
+- **Files touched:**
+  - `server/configStore.cjs` (new)
+  - `server/index.ts`
+  - `scripts/advisor-proxy.js`
+  - `scripts/deploy-advisor.mjs`
+  - `src/services/serverConfig.ts` (new)
+  - `src/services/settings.ts`
+  - `src/services/ai.ts`
+  - `src/App.tsx`
+  - `src/pages/Admin.tsx`
+  - `VERSIONS.md`
+  - `package.json`
+- **Breaking:** no
+
 ## v5.13.1 — 2026-07-20
 - **Type:** INFRA / FIX
 - **Changes:**

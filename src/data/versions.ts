@@ -9,6 +9,20 @@ export interface VersionEntry {
 
 export const versions: VersionEntry[] = [
   {
+    "version": "5.14.0",
+    "date": "21 Jul 2026",
+    "type": "FEATURE",
+    "changes": [
+      "Moved provider, model, image preference, web search, and step prompts to a server-side config file so desktop and mobile stay in sync.",
+      "Moved API keys (OpenAI, DeepSeek, Tavily) to a server-side keys file; they are no longer stored in the browser.",
+      "Added `/api/config` and `/api/keys` endpoints to both the local dev server and the production proxy.",
+      "Added \"Save Config to Server\", \"Load from Server\", and \"Save API Keys to Server\" buttons to the admin panel.",
+      "Changed the default text provider to DeepSeek to avoid the current OpenAI quota issue on the server-side key.",
+      "Updated the deploy script to upload the shared config store helper alongside the proxy."
+    ],
+    "latest": true
+  },
+  {
     "version": "5.13.1",
     "date": "20 Jul 2026",
     "type": "FIX",
@@ -19,7 +33,7 @@ export const versions: VersionEntry[] = [
       "Added canonical redirect: `https://apps.pesat.ai/advisor/*` → `https://pesat.ai/advisor/`.",
       "Added `VERSIONS.md` and the in-app `/version` page."
     ],
-    "latest": true
+    "latest": false
   },
   {
     "version": "5.13.0",
