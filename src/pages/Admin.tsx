@@ -30,6 +30,7 @@ import {
   type StepPrompt,
 } from '../services/settings';
 import { versions } from '../data/versions';
+import { fetchServerConfig } from '../services/serverConfig';
 
 const ADMIN_PASSWORD = 'jdp123';
 const easeOutExpo: [number, number, number, number] = [0.16, 1, 0.3, 1];
@@ -50,6 +51,12 @@ export default function Admin() {
   const [stepTestResults, setStepTestResults] = useState<
     Record<number, { response: string; loading: boolean }>
   >({});
+  const [serverKeyStatus, setServerKeyStatus] = useState({
+    openai: false,
+    deepseek: false,
+    tavily: false,
+  });
+  const [serverError, setServerError] = useState<string | null>(null);
 
   const runStepTest = useCallback(async (step: StepPrompt) => {
     setStepTestResults((prev) => ({ ...prev, [step.step]: { response: '', loading: true } }));
@@ -154,6 +161,90 @@ export default function Admin() {
     setPassword('');
   }, []);
 
+  const loadServerSettings = useCallback(async () => {
+    try {
+      const cfg = await fetchServerConfig();
+      if (!cfg) return;
+      const next: AdvisorSettings = {
+        ...settings,
+        textProvider: cfg.textProvider,
+        imageProvider: cfg.imageProvider,
+        openaiModel: cfg.openaiModel,
+        deepseekModel: cfg.deepseekModel,
+        autoImageGen: cfg.autoImageGen,
+        imageStyle: cfg.imageStyle,
+        maxImagesPerResponse: cfg.maxImagesPerResponse,
+        webSearchEnabled: cfg.webSearchEnabled,
+        stepPrompts: cfg.stepPrompts.length ? cfg.stepPrompts : settings.stepPrompts,
+        promptVersion: cfg.promptVersion,
+        updatedAt: cfg.updatedAt,
+      };
+      setSettings(next);
+      saveSettings(next);
+      setServerKeyStatus({
+        openai: cfg.hasOpenAiKey,
+        deepseek: cfg.hasDeepseekKey,
+        tavily: cfg.hasTavilyKey,
+      });
+      setServerError(null);
+      setSaved(true);
+      setTimeout(() => setSaved(false), 1500);
+    } catch (e: any) {
+      setServerError(e.message || 'Failed to load server config');
+    }
+  }, [settings]);
+
+  const saveServerConfig = useCallback(async () => {
+    try {
+      const { openaiKey, deepseekKey, tavilyKey, ...config } = settings;
+      const res = await fetch('/api/config', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ adminPassword: ADMIN_PASSWORD, config }),
+      });
+      if (!res.ok) throw new Error(`HTTP ${res.status}`);
+      setServerError(null);
+      setSaved(true);
+      setTimeout(() => setSaved(false), 1500);
+    } catch (e: any) {
+      setServerError(e.message || 'Failed to save server config');
+    }
+  }, [settings]);
+
+  const saveServerKeys = useCallback(async () => {
+    try {
+      const res = await fetch('/api/keys', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          adminPassword: ADMIN_PASSWORD,
+          keys: {
+            OPENAI_API_KEY: settings.openaiKey,
+            DEEPSEEK_API_KEY: settings.deepseekKey,
+            TAVILY_API_KEY: settings.tavilyKey,
+          },
+        }),
+      });
+      if (!res.ok) throw new Error(`HTTP ${res.status}`);
+      setServerKeyStatus({
+        openai: !!settings.openaiKey,
+        deepseek: !!settings.deepseekKey,
+        tavily: !!settings.tavilyKey,
+      });
+      setServerError(null);
+      setSaved(true);
+      setTimeout(() => setSaved(false), 1500);
+    } catch (e: any) {
+      setServerError(e.message || 'Failed to save API keys');
+    }
+  }, [settings]);
+
+  useEffect(() => {
+    if (authenticated) {
+      loadServerSettings();
+    }
+  }, [authenticated, loadServerSettings]);
+
   // ---- Password Gate ----
   if (!authenticated) {
     return (
@@ -248,6 +339,48 @@ export default function Admin() {
               Saved
             </motion.div>
           )}
+        </div>
+
+        {serverError && (
+          <div className="p-3 bg-red-500/10 border border-red-500/20 rounded-xl text-xs text-red-400 text-center">
+            {serverError}
+          </div>
+        )}
+
+        <div className="flex flex-wrap gap-2 justify-center">
+          <button
+            onClick={saveServerConfig}
+            className="px-3 py-2 rounded-xl text-xs font-medium border border-[rgba(124,58,237,0.2)] text-[#A78BFA] hover:bg-[rgba(124,58,237,0.1)] transition-colors"
+          >
+            Save Config to Server
+          </button>
+          <button
+            onClick={loadServerSettings}
+            className="px-3 py-2 rounded-xl text-xs font-medium border border-[rgba(124,58,237,0.2)] text-[#A78BFA] hover:bg-[rgba(124,58,237,0.1)] transition-colors"
+          >
+            Load from Server
+          </button>
+        </div>
+
+        <div className="grid grid-cols-3 gap-2 text-center">
+          <div className={`text-xs ${serverKeyStatus.openai ? 'text-[#22C55E]' : 'text-[#64748B]'}`}>
+            OpenAI: {serverKeyStatus.openai ? 'saved' : 'not set'}
+          </div>
+          <div className={`text-xs ${serverKeyStatus.deepseek ? 'text-[#22C55E]' : 'text-[#64748B]'}`}>
+            DeepSeek: {serverKeyStatus.deepseek ? 'saved' : 'not set'}
+          </div>
+          <div className={`text-xs ${serverKeyStatus.tavily ? 'text-[#22C55E]' : 'text-[#64748B]'}`}>
+            Tavily: {serverKeyStatus.tavily ? 'saved' : 'not set'}
+          </div>
+        </div>
+
+        <div className="flex justify-center">
+          <button
+            onClick={saveServerKeys}
+            className="px-3 py-2 rounded-xl text-xs font-medium border border-[rgba(124,58,237,0.2)] text-[#A78BFA] hover:bg-[rgba(124,58,237,0.1)] transition-colors"
+          >
+            Save API Keys to Server
+          </button>
         </div>
 
         {/* ======== TEXT AI PROVIDER ======== */}
