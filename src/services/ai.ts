@@ -9,12 +9,11 @@ export async function sendMessage(
   const settings = loadSettings();
   const provider = settings.textProvider;
   const model = provider === 'openai' ? settings.openaiModel : settings.deepseekModel;
-  const apiKey = provider === 'openai' ? settings.openaiKey : settings.deepseekKey;
 
   const response = await fetch(`${PROXY_URL}/chat`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ provider, model, messages, apiKey, temperature: 0.8 }),
+    body: JSON.stringify({ provider, model, messages, temperature: 0.8 }),
     signal: options?.signal,
   });
   if (!response.ok) throw new Error(`API error: ${response.status}`);
@@ -25,13 +24,12 @@ export async function sendTextOnlyMessage(systemPrompt: string, userPrompt: stri
   const settings = loadSettings();
   const provider = settings.textProvider;
   const model = provider === 'openai' ? settings.openaiModel : settings.deepseekModel;
-  const apiKey = provider === 'openai' ? settings.openaiKey : settings.deepseekKey;
 
   const response = await fetch(`${PROXY_URL}/chat`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({
-      provider, model, apiKey, temperature: 0.8,
+      provider, model, temperature: 0.8,
       messages: [
         { role: 'system', content: systemPrompt },
         { role: 'user', content: userPrompt },
@@ -47,7 +45,7 @@ export async function generateImage(prompt: string, n: number = 1) {
   const response = await fetch(`${PROXY_URL}/image`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ prompt, provider: settings.imageProvider, apiKey: settings.openaiKey, n }),
+    body: JSON.stringify({ prompt, provider: settings.imageProvider, n }),
   });
   if (!response.ok) throw new Error(`Image API error: ${response.status}`);
   const data = await response.json();
@@ -56,12 +54,12 @@ export async function generateImage(prompt: string, n: number = 1) {
 
 export async function webSearch(query: string) {
   const settings = loadSettings();
-  if (!settings.webSearchEnabled || !settings.tavilyKey) return null;
+  if (!settings.webSearchEnabled) return null;
 
   const response = await fetch(`${PROXY_URL}/search`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ query, apiKey: settings.tavilyKey }),
+    body: JSON.stringify({ query }),
   });
   if (!response.ok) throw new Error(`Search API error: ${response.status}`);
   return response.json();
@@ -86,7 +84,6 @@ export async function testConnection(type: 'openai' | 'deepseek' | 'tavily'): Pr
         body: JSON.stringify({
           provider: 'openai',
           model: settings.openaiModel,
-          apiKey: settings.openaiKey,
           messages: [{ role: 'user', content: 'Hi' }],
           temperature: 0.1,
         }),
@@ -98,14 +95,12 @@ export async function testConnection(type: 'openai' | 'deepseek' | 'tavily'): Pr
     }
 
     if (type === 'deepseek') {
-      if (!settings.deepseekKey) return { ok: false, latency: 0, error: 'No API key configured' };
       const response = await fetch(`${PROXY_URL}/chat`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           provider: 'deepseek',
           model: settings.deepseekModel,
-          apiKey: settings.deepseekKey,
           messages: [{ role: 'user', content: 'Hi' }],
           temperature: 0.1,
         }),
@@ -117,11 +112,10 @@ export async function testConnection(type: 'openai' | 'deepseek' | 'tavily'): Pr
     }
 
     if (type === 'tavily') {
-      if (!settings.tavilyKey) return { ok: false, latency: 0, error: 'No API key configured' };
       const response = await fetch(`${PROXY_URL}/search`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ query: 'test', apiKey: settings.tavilyKey }),
+        body: JSON.stringify({ query: 'test' }),
       });
       const latency = Math.round(performance.now() - start);
       if (response.ok) return { ok: true, latency };
