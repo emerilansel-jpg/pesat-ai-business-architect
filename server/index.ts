@@ -1,6 +1,7 @@
 import express from 'express';
 import cors from 'cors';
 import type { Request, Response } from 'express';
+import * as configStore from './configStore.cjs';
 
 const app = express();
 app.use(cors());
@@ -21,7 +22,8 @@ app.use((req: Request, _res: Response, next) => {
  */
 app.post('/api/image', async (req: Request, res: Response) => {
   try {
-    const { prompt, apiKey, n = 1, model = 'gpt-image-1', size = '1024x1024' } = req.body;
+    const { prompt, n = 1, model = 'gpt-image-1', size = '1024x1024' } = req.body;
+    const apiKey = req.body.apiKey || configStore.getKey('openai');
     console.log('Image request received, key present:', !!apiKey, 'prompt:', prompt?.slice(0, 50));
 
     if (!apiKey) {
@@ -71,7 +73,8 @@ app.post('/api/image', async (req: Request, res: Response) => {
  */
 app.post('/api/chat', async (req: Request, res: Response) => {
   try {
-    const { provider, model, messages, apiKey, temperature = 0.8 } = req.body;
+    const { provider, model, messages, temperature = 0.8 } = req.body;
+    const apiKey = req.body.apiKey || configStore.getKey(provider);
 
     if (!apiKey) {
       return res.status(400).json({ error: 'Missing API key' });
@@ -112,7 +115,8 @@ app.post('/api/chat', async (req: Request, res: Response) => {
  */
 app.post('/api/search', async (req: Request, res: Response) => {
   try {
-    const { query, apiKey } = req.body;
+    const { query } = req.body;
+    const apiKey = req.body.apiKey || configStore.getKey('tavily');
 
     if (!apiKey) {
       return res.status(400).json({ error: 'Missing Tavily API key' });
@@ -138,6 +142,42 @@ app.post('/api/search', async (req: Request, res: Response) => {
     console.error('Search proxy error:', err);
     return res.status(500).json({ error: err.message || 'Internal server error' });
   }
+});
+
+/**
+ * Server-side config endpoints.
+ */
+app.get('/api/config', (_req: Request, res: Response) => {
+  configStore.ensureConfig();
+  const config = configStore.loadConfig();
+  res.json({
+    ...config,
+    hasOpenAiKey: configStore.hasKey('openai'),
+    hasDeepseekKey: configStore.hasKey('deepseek'),
+    hasTavilyKey: configStore.hasKey('tavily'),
+  });
+});
+
+app.post('/api/config', (req: Request, res: Response) => {
+  const { adminPassword, config } = req.body;
+  if (!configStore.verifyAdminPassword(adminPassword)) {
+    return res.status(401).json({ error: 'Unauthorized' });
+  }
+  configStore.saveConfig(config);
+  res.json({ success: true });
+});
+
+app.post('/api/keys', (req: Request, res: Response) => {
+  const { adminPassword, keys } = req.body;
+  if (!configStore.verifyAdminPassword(adminPassword)) {
+    return res.status(401).json({ error: 'Unauthorized' });
+  }
+  configStore.saveKeys(keys);
+  res.json({ success: true });
+});
+
+app.get('/api/health', (_req: Request, res: Response) => {
+  res.json({ status: 'ok' });
 });
 
 app.listen(PORT, () => {
