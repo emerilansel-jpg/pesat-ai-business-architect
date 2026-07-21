@@ -7,21 +7,36 @@ import { InputFocusContext } from '../App';
 interface InputBarProps {
   onSend: (message: string) => void;
   disabled?: boolean;
+  prefill?: string;
 }
 
 const easeOutExpo: [number, number, number, number] = [0.16, 1, 0.3, 1];
 
-const InputBar = memo(function InputBar({ onSend, disabled = false }: InputBarProps) {
+const InputBar = memo(function InputBar({ onSend, disabled = false, prefill = '' }: InputBarProps) {
   const [input, setInput] = useState('');
   const textareaRef = useRef<HTMLTextAreaElement>(null);
   const { trigger } = useContext(InputFocusContext);
 
-  // Focus textarea when "Lainnya..." is clicked
+  // Focus textarea when "Lainnya..." is clicked, or apply prefill when provided
   useEffect(() => {
     if (trigger > 0) {
-      textareaRef.current?.focus();
+      if (prefill) {
+        setInput(prefill);
+        // clear after apply so user edits are preserved
+        setTimeout(() => {
+          textareaRef.current?.focus();
+          // move cursor to end
+          const el = textareaRef.current;
+          if (el) {
+            const len = el.value.length;
+            el.setSelectionRange(len, len);
+          }
+        }, 50);
+      } else {
+        textareaRef.current?.focus();
+      }
     }
-  }, [trigger]);
+  }, [trigger, prefill]);
 
   const handleSend = useCallback(() => {
     const trimmed = input.trim();
@@ -63,7 +78,7 @@ const InputBar = memo(function InputBar({ onSend, disabled = false }: InputBarPr
             value={input}
             onChange={(e) => setInput(e.target.value)}
             onKeyDown={handleKeyDown}
-            placeholder="Ceritakan bisnis Anda..."
+            placeholder="Ceritakan bisnis Anda… contoh: Brand saya adalah X, domain X.com, produk utama X..."
             disabled={disabled}
             minRows={1}
             maxRows={4}

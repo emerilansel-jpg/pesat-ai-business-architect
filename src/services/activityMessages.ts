@@ -122,9 +122,9 @@ export async function generateActivityMessages(
 ): Promise<Partial<Record<ActivityStage, string>> | null> {
   try {
     const prompt = `Kamu asisten AI lucu dan cerdas bernama Pesat AI. User meminta: "${task}".
-Tim virtual kamu: Jaka Sembung (Design), Gundala (Coding), Sri Asih (Strategy), tukang bubur depan (Ops). Buat status message pendek (maks 50 karakter) untuk tiap tahap proses, dalam Bahasa Indonesia, yang terasa seperti game notification dari tim expert ini.
+Tim pahlawan Indonesia yang bekerja untukmu: Srikandi (Strategist), Godam (Architect), Wiro Sableng (Field Researcher), Gundala (Intel), Gatotkaca (Analyst/Engineer), Arjuna (Ideator), Jaka Sembung (Art Director), Sri Asih (Visual Designer), Tukang Bubur (Morale Officer). Buat status message pendek (maks 60 karakter) untuk tiap tahap, dalam Bahasa Indonesia, yang terasa seperti game notification dari tim pahlawan ini — beberapa ahli yang masuk/keluar sesuai tahapnya.
 Tahap: thinking, searching, analyzing, crafting, image, success, error.
-Gunakan emoji, humor, variasi, dan referensi task user. Jangan sama setiap sesi.
+Gunakan emoji, humor, variasi, referensi task user, dan sebutkan nama pahlawan yang sedang bertugas. Jangan sama setiap sesi.
 Format HANYA JSON:
 {
   "thinking": "...",

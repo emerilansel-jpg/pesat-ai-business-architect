@@ -15,6 +15,8 @@ interface ChatAreaProps {
 const ChatArea = memo(function ChatArea({ messages, isTyping, onRetry, onChoiceClick }: ChatAreaProps) {
   const scrollRef = useRef<HTMLDivElement>(null);
   const [showScrollButton, setShowScrollButton] = useState(false);
+  const prevMessagesLenRef = useRef(0);
+  const prevIsTypingRef = useRef(false);
 
   const scrollToBottom = useCallback(() => {
     if (scrollRef.current) {
@@ -25,10 +27,44 @@ const ChatArea = memo(function ChatArea({ messages, isTyping, onRetry, onChoiceC
     }
   }, []);
 
-  // Auto-scroll on new messages
+  // Detect mobile once — used to gate aggressive auto-scroll so the AI's
+  // long answer doesn't yank the viewport down on phones.
+  const isMobileViewport = useCallback(() => {
+    if (typeof window === 'undefined') return false;
+    return window.innerWidth < 768 || /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent);
+  }, []);
+
+  // Auto-scroll behavior (UX/CRO tuned):
+  // - While the user is waiting (typing indicator ON): always smooth-scroll to bottom
+  //   so the typing indicator stays visible.
+  // - When a NEW AI message just landed (typing went true->false AND message count grew):
+  //   on desktop, scroll to bottom as before; on mobile, leave the scroll position alone
+  //   so the user can read from the top. A "jump to latest" pill stays accessible.
+  // - When the user sends a new message (length grew but typing didn't flip): scroll to bottom.
   useEffect(() => {
-    scrollToBottom();
-  }, [messages.length, isTyping, scrollToBottom]);
+    const len = messages.length;
+    const grew = len > prevMessagesLenRef.current;
+    const typingTurnedOff = prevIsTypingRef.current && !isTyping;
+    const userJustSent = grew && !typingTurnedOff;
+
+    if (isTyping) {
+      // typing indicator visible — keep it in view
+      scrollToBottom();
+    } else if (userJustSent) {
+      // user sent a new message — scroll their bubble into view
+      scrollToBottom();
+    } else if (typingTurnedOff && grew) {
+      // AI just finished an answer
+      if (!isMobileViewport()) {
+        scrollToBottom();
+      }
+      // On mobile: do nothing. Let the user scroll at their own pace.
+      // The ScrollToBottom pill appears automatically if they're not near the end.
+    }
+
+    prevMessagesLenRef.current = len;
+    prevIsTypingRef.current = isTyping;
+  }, [messages.length, isTyping, scrollToBottom, isMobileViewport]);
 
   // Track scroll position
   const handleScroll = useCallback(() => {
@@ -82,15 +118,23 @@ const ChatArea = memo(function ChatArea({ messages, isTyping, onRetry, onChoiceC
           style={{ paddingBottom: 'var(--mobile-panel-height, 0)' }}
         >
           <AnimatePresence>
-            {messages.map((message, index) => (
-              <ChatMessage
-                key={message.id}
-                message={message}
-                isLastAI={index === lastAIIndex}
-                onRetry={index === lastAIIndex ? onRetry : undefined}
-                onChoiceClick={onChoiceClick}
-              />
-            ))}
+            {messages.map((message, index) => {
+              // Count how many AI messages came before (inclusive) — used to
+              // trigger the fallback WhatsApp CTA from the 3rd AI reply onward.
+              const aiMessageIndex = messages
+                .slice(0, index + 1)
+                .filter((m) => m.role === 'assistant').length;
+              return (
+                <ChatMessage
+                  key={message.id}
+                  message={message}
+                  isLastAI={index === lastAIIndex}
+                  aiMessageIndex={aiMessageIndex}
+                  onRetry={index === lastAIIndex ? onRetry : undefined}
+                  onChoiceClick={onChoiceClick}
+                />
+              );
+            })}
           </AnimatePresence>
 
           {isTyping && <TypingIndicator />}

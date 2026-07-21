@@ -5,7 +5,6 @@ import {
   X,
   ChevronUp,
   Trophy,
-  Loader2,
   Minus,
   Lightbulb,
   Search,
@@ -22,61 +21,61 @@ const stageMeta: Record<
   { label: string; color: string; gradient: string; progress: number }
 > = {
   thinking: {
-    label: 'Mikir dulu...',
+    label: 'Tim strategi berkumpul...',
     color: '#7C3AED',
     gradient: 'from-[#7C3AED]/25 to-[#3B82F6]/10',
     progress: 15,
   },
   search: {
-    label: 'Riset dulu...',
+    label: 'Wiro Sableng turun ke pasar...',
     color: '#3B82F6',
     gradient: 'from-[#3B82F6]/25 to-[#06B6D4]/10',
     progress: 30,
   },
   analyze: {
-    label: 'Planning dulu...',
+    label: 'Gundala menyalakan petir analisis...',
     color: '#06B6D4',
     gradient: 'from-[#06B6D4]/25 to-[#8B5CF6]/10',
     progress: 45,
   },
   sparkle: {
-    label: 'Ajak tim ahli rapat...',
+    label: 'Srikandi merangkul tim ahli...',
     color: '#EC4899',
     gradient: 'from-[#EC4899]/25 to-[#7C3AED]/10',
     progress: 60,
   },
   image: {
-    label: 'Contacting Jaka Sembung (Design expert)...',
+    label: 'Jaka Sembung buka sketchbook...',
     color: '#F59E0B',
     gradient: 'from-[#F59E0B]/25 to-[#7C3AED]/10',
     progress: 80,
   },
   meeting: {
-    label: 'Meeting dimulai...',
+    label: 'Godam memimpin rapat...',
     color: '#8B5CF6',
     gradient: 'from-[#8B5CF6]/25 to-[#EC4899]/10',
     progress: 70,
   },
   coffee: {
-    label: 'Ngopi dulu bentar...',
+    label: 'Tukang bubur kirim update...',
     color: '#A97142',
     gradient: 'from-[#A97142]/25 to-[#F59E0B]/10',
     progress: 75,
   },
   design: {
-    label: 'Assign task ke Jaka Sembung...',
+    label: 'Arjuna & Srikandi menyusun visual...',
     color: '#EC4899',
     gradient: 'from-[#EC4899]/25 to-[#F59E0B]/10',
     progress: 85,
   },
   code: {
-    label: 'Sri Asih & tim coding mulai gerak...',
+    label: 'Gatotkaca mulai coding...',
     color: '#3B82F6',
     gradient: 'from-[#3B82F6]/25 to-[#06B6D4]/10',
     progress: 90,
   },
   deploy: {
-    label: 'Tukang bubur depan juga dikasih task...',
+    label: 'TimFinish menyentuh final check...',
     color: '#10B981',
     gradient: 'from-[#10B981]/25 to-[#3B82F6]/10',
     progress: 95,
@@ -95,75 +94,234 @@ const stageMeta: Record<
   },
 };
 
-const funMessages: Record<ActivityIcon, string[]> = {
+// Cast of Indonesian legend characters. Each character owns a domain and a
+// rotating set of in-character messages. The activity panel picks a member
+// per stage so the panel feels like a real team working in parallel — not
+// a single mascot looping the same lines.
+interface CastMember {
+  name: string;
+  role: string;
+  emoji: string;
+  accent: string; // hex color
+  lines: string[];
+}
+
+const CAST: Record<ActivityIcon, CastMember[]> = {
   thinking: [
-    'Sedang mikir keras bareng tim...',
-    'Nyalain otak AI dan ngopi dulu...',
-    'Buka pikiran, siapin strategi...',
-    ' brainstorming internal dulu...',
+    {
+      name: 'Srikandi',
+      role: 'Strategist',
+      emoji: '🏹',
+      accent: '#EC4899',
+      lines: [
+        'Srikandi menarik busur strategi, membidik sasaran...',
+        'Srikandi menyusun battle plan buat bisnis anda...',
+      ],
+    },
+    {
+      name: 'Godam',
+      role: 'Architect',
+      emoji: '🔨',
+      accent: '#8B5CF6',
+      lines: [
+        'Godam menarik napas, memusatkan pikiran...',
+        'Godam menyusun blueprint di kepalanya...',
+      ],
+    },
   ],
   search: [
-    'Sedang jelajah internet & kompetitor...',
-    'Riset market & tren terbaru...',
-    'Intip data & review customer...',
-    'Cari fakta menarik buat bisnis anda...',
+    {
+      name: 'Wiro Sableng',
+      role: 'Field Researcher',
+      emoji: '⚔️',
+      accent: '#3B82F6',
+      lines: [
+        'Wiro Sableng menyusuri pasar internet dengan kapak 212...',
+        'Wiro mengejar data kompetitor sampai ke ujung dunia...',
+      ],
+    },
+    {
+      name: 'Gundala',
+      role: 'Intel',
+      emoji: '⚡',
+      accent: '#06B6D4',
+      lines: [
+        'Gundala menyalakan petir, scan seluruh market...',
+        'Gundala kejar review customer dengan kecepatan kilat...',
+      ],
+    },
   ],
   analyze: [
-    'Sedang baca pola bisnis anda...',
-    'Planning & connect the dots...',
-    'Analisa bottleneck tersembunyi...',
-    'Susun strategi jitu...',
+    {
+      name: 'Gatotkaca',
+      role: 'Analyst',
+      emoji: '🛡️',
+      accent: '#F59E0B',
+      lines: [
+        'Gatotkaca menabrak dinding data, otaknya membaca pola...',
+        'Gatotkaca otak-kuning menyala, menghubungkan titik-titik...',
+      ],
+    },
+    {
+      name: 'Godam',
+      role: 'Architect',
+      emoji: '🔨',
+      accent: '#8B5CF6',
+      lines: [
+        'Godam membedah bottleneck dengan palu logika...',
+      ],
+    },
   ],
   sparkle: [
-    'Ajak tim ahli rapat virtual...',
-    'Sedang diskusi seru sama expert...',
-    'Racik solusi yang paling masuk akal...',
-    'Polish ide jadi emas...',
-  ],
-  image: [
-    'Contacting Jaka Sembung (Design expert)...',
-    'Jaka Sembung lagi siapin sketch...',
-    'Sedang gambar visual strategis...',
-    'Design team lagi ngopi & ngerjain...',
+    {
+      name: 'Arjuna',
+      role: 'Ideator',
+      emoji: '🏹',
+      accent: '#10B981',
+      lines: [
+        'Arjuna membidik ide paling tajam dari sempalan strategi...',
+        'Arjuna merangkai solusi seindah panah sakti...',
+      ],
+    },
+    {
+      name: 'Srikandi',
+      role: 'Strategist',
+      emoji: '🏹',
+      accent: '#EC4899',
+      lines: [
+        'Srikandi memoles draft strategi sampai kinclong...',
+      ],
+    },
   ],
   meeting: [
-    'Meeting dimulai...',
-    'Semua expert sudah on cam...',
-    'Sedang presentasi hasil riset...',
+    {
+      name: 'Godam',
+      role: 'Architect',
+      emoji: '🔨',
+      accent: '#8B5CF6',
+      lines: [
+        'Godam ketok palu, rapat dimulai!',
+        'Semua pahlawan on-cam, Godam pimpin diskusi...',
+      ],
+    },
+  ],
+  image: [
+    {
+      name: 'Jaka Sembung',
+      role: 'Art Director',
+      emoji: '🗡️',
+      accent: '#F59E0B',
+      lines: [
+        'Jaka Sembung buka sketchbook, mulai sketsa visual...',
+        'Jaka Sembung goreskan kuas, design mengalir...',
+        'Jaka Sembung ngopi item sambil polish layout...',
+      ],
+    },
+    {
+      name: 'Sri Asih',
+      role: 'Visual Designer',
+      emoji: '💫',
+      accent: '#EC4899',
+      lines: [
+        'Sri Asih bantu Jaka Sembung merangkai palet warna...',
+        'Sri Asih tambah sentuhan estetik di setiap frame...',
+      ],
+    },
   ],
   coffee: [
-    'Ngopi dulu bentar...',
-    'Istirahat sejenak sambil mikir...',
-    'Kopi item pahit, ide manis...',
+    {
+      name: 'Tukang Bubur',
+      role: 'Morale Officer',
+      emoji: '🍲',
+      accent: '#A97142',
+      lines: [
+        'Tukang bubur datang bawa sarapan, tim on fire!',
+        'Tukang bubur share gosip kompetitor sambil tuang bubur...',
+      ],
+    },
   ],
   design: [
-    'Assign task ke Jaka Sembung...',
-    'Jaka Sembung mulai design...',
-    'Sri Asih siap bantu review...',
+    {
+      name: 'Jaka Sembung',
+      role: 'Art Director',
+      emoji: '🗡️',
+      accent: '#F59E0B',
+      lines: [
+        'Jaka Sembung finalisasi visual strategis...',
+        'Jaka Sembung ukir infografis sampai presisi...',
+      ],
+    },
+    {
+      name: 'Sri Asih',
+      role: 'Visual Designer',
+      emoji: '💫',
+      accent: '#EC4899',
+      lines: [
+        'Sri Asih review detail kecil yang sering kepalya...',
+      ],
+    },
   ],
   code: [
-    'Sri Asih & tim coding mulai gerak...',
-    'Sedang bangun sistem & automasi...',
-    'Coding sambil dengerin dangdut...',
+    {
+      name: 'Gatotkaca',
+      role: 'Engineer',
+      emoji: '🛡️',
+      accent: '#3B82F6',
+      lines: [
+        'Gatotkaca nugel kode bug dengan otot Kawitra...',
+        'Gatotkaca build automasi secepat kilat...',
+      ],
+    },
+    {
+      name: 'Gundala',
+      role: 'Backend',
+      emoji: '⚡',
+      accent: '#06B6D4',
+      lines: [
+        'Gundala alirkan listrik ke setiap endpoint API...',
+      ],
+    },
   ],
   deploy: [
-    'Tukang bubur depan juga dikasih task...',
-    'Sedang deploy & final check...',
-    'Semua tim fokus nyelesaiin...',
+    {
+      name: 'Wiro Sableng',
+      role: 'QA',
+      emoji: '⚔️',
+      accent: '#10B981',
+      lines: [
+        'Wiro Sableng uji sistem, pastikan tidak ada celah...',
+        'Wiro lempar kapak 212, tebas bug terakhir...',
+      ],
+    },
   ],
   success: [
-    'Selesai! Keren kan? 🎉',
-    'Jadi! Siap bantu lagi? 🚀',
-    'Done! Semoga membantu! 🎊',
-    'Mantap, respons sudah siap! ✨',
+    {
+      name: 'Tim Pahlawan',
+      role: 'Done!',
+      emoji: '🎉',
+      accent: '#22C55E',
+      lines: [
+        'Semua pahlawan angkat gelas, misi selesai! 🎊',
+        'Tim kembali ke markas, hasil sudah siap! 🚀',
+        'Godam ketuk palu: APPROVED! ✅',
+      ],
+    },
   ],
   error: [
-    'Ups, ada error. Coba lagi ya? 😅',
-    'Waduh, ada kendala teknis. Coba ulang! 🛠️',
-    'Gagal nih, tapi jangan menyerah! 🚀',
-    'Hickup! Mari coba sekali lagi. 💪',
+    {
+      name: 'Tim Pahlawan',
+      role: 'Hickup',
+      emoji: '🚧',
+      accent: '#EF4444',
+      lines: [
+        'Waduh, ada musuh baru. Tim mundur sebentar, sregroupp! 🛡️',
+        'Ada gangguan kekuatan, kami sambut lagi sebentar...',
+      ],
+    },
   ],
 };
+
+
 
 const funFacts = [
   'Fun fact: Tim virtual kita kerja 24/7 tanpa ngantuk. ☕',
@@ -176,18 +334,30 @@ const funFacts = [
   'Tahukah anda? AI agent bisa kerja 24/7 tanpa ngantuk.',
 ];
 
-function useFunMessage(icon: ActivityIcon) {
-  const [message, setMessage] = useState(() => {
-    const list = funMessages[icon] || funMessages.thinking;
-    return list[Math.floor(Math.random() * list.length)];
-  });
+/**
+ * Pick a cast member for the current icon and rotate it on a cadence so the
+ * panel feels like multiple experts drifting in and out of the war room.
+ * Returns the active member plus the line they're currently "saying".
+ */
+function useActiveCastMember(icon: ActivityIcon, isProcessing: boolean) {
+  const members = CAST[icon] || CAST.thinking;
+  const [index, setIndex] = useState(() => Math.floor(Math.random() * members.length));
 
   useEffect(() => {
-    const list = funMessages[icon] || funMessages.thinking;
-    setMessage(list[Math.floor(Math.random() * list.length)]);
-  }, [icon]);
+    if (!isProcessing) return;
+    // re-pick whenever the stage/icon changes
+    setIndex(Math.floor(Math.random() * members.length));
+    // rotate every 3.5s if there are multiple members, simulating handoff
+    if (members.length <= 1) return;
+    const interval = window.setInterval(() => {
+      setIndex((prev) => (prev + 1) % members.length);
+    }, 3500);
+    return () => window.clearInterval(interval);
+  }, [icon, isProcessing, members.length]);
 
-  return message;
+  const member = members[index] || members[0];
+  const line = member.lines[Math.floor(Math.random() * member.lines.length)];
+  return { member, line };
 }
 
 const stageSpeed: Record<ActivityStage, number> = {
@@ -693,7 +863,7 @@ export default function ActivityPanel() {
   const currentLog = logs[logs.length - 1];
   const currentIcon = currentLog?.icon || stageToIcon[currentStage] || 'thinking';
   const meta = stageMeta[currentIcon] || stageMeta.thinking;
-  const funMessage = useFunMessage(currentIcon);
+  const { member: activeMember, line: activeLine } = useActiveCastMember(currentIcon, isProcessing);
   const dragControls = useDragControls();
 
   const currentLogId = currentLog?.id;
@@ -804,14 +974,32 @@ export default function ActivityPanel() {
                       <CendekiaBot icon={currentIcon} stage={currentStage} isProcessing={isProcessing} />
                     </div>
                     {isProcessing && <WalkingDots />}
+                    {/* Active cast member badge — feels like an expert stepping up */}
+                    <AnimatePresence mode="wait">
+                      <motion.div
+                        key={activeMember.name + currentIcon}
+                        initial={{ opacity: 0, y: 6, scale: 0.92 }}
+                        animate={{ opacity: 1, y: 0, scale: 1 }}
+                        exit={{ opacity: 0, y: -6, scale: 0.92 }}
+                        transition={{ duration: 0.28, ease: [0.16, 1, 0.3, 1] }}
+                        className="flex items-center gap-2 px-3 py-1.5 rounded-full border bg-[rgba(26,31,53,0.7)] backdrop-blur-sm"
+                        style={{ borderColor: `${activeMember.accent}55` }}
+                      >
+                        <span className="text-[16px] leading-none">{activeMember.emoji}</span>
+                        <div className="flex flex-col leading-tight">
+                          <span className="text-[12px] font-semibold text-[#F8FAFC]">{activeMember.name}</span>
+                          <span className="text-[10px] text-[#A78BFA]">{activeMember.role}</span>
+                        </div>
+                      </motion.div>
+                    </AnimatePresence>
                   <motion.p
-                    key={currentIcon + funMessage}
+                    key={currentIcon + activeLine}
                     initial={{ opacity: 0, y: 6, scale: 0.95 }}
                     animate={{ opacity: 1, y: 0, scale: 1 }}
                     transition={{ duration: 0.3, ease: [0.16, 1, 0.3, 1] }}
                     className="text-[14px] font-bold text-[#F8FAFC] text-center leading-tight px-2"
                   >
-                    {funMessage}
+                    {activeLine}
                   </motion.p>
                   {currentStage === 'success' && (
                     <>
@@ -940,14 +1128,31 @@ export default function ActivityPanel() {
                       <CendekiaBot icon={currentIcon} stage={currentStage} isProcessing={isProcessing} />
                     </div>
                     {isProcessing && <WalkingDots />}
+                    <AnimatePresence mode="wait">
+                      <motion.div
+                        key={activeMember.name + currentIcon}
+                        initial={{ opacity: 0, y: 6, scale: 0.92 }}
+                        animate={{ opacity: 1, y: 0, scale: 1 }}
+                        exit={{ opacity: 0, y: -6, scale: 0.92 }}
+                        transition={{ duration: 0.28, ease: [0.16, 1, 0.3, 1] }}
+                        className="flex items-center gap-2 px-3 py-1.5 rounded-full border bg-[rgba(26,31,53,0.7)] backdrop-blur-sm"
+                        style={{ borderColor: `${activeMember.accent}55` }}
+                      >
+                        <span className="text-[18px] leading-none">{activeMember.emoji}</span>
+                        <div className="flex flex-col leading-tight">
+                          <span className="text-[13px] font-semibold text-[#F8FAFC]">{activeMember.name}</span>
+                          <span className="text-[11px] text-[#A78BFA]">{activeMember.role}</span>
+                        </div>
+                      </motion.div>
+                    </AnimatePresence>
                     <motion.p
-                      key={currentIcon + funMessage}
+                      key={currentIcon + activeLine}
                       initial={{ opacity: 0, y: 6, scale: 0.95 }}
                       animate={{ opacity: 1, y: 0, scale: 1 }}
                       transition={{ duration: 0.3, ease: [0.16, 1, 0.3, 1] }}
                       className="text-[16px] font-bold text-[#F8FAFC] text-center leading-tight px-6"
                     >
-                      {funMessage}
+                      {activeLine}
                     </motion.p>
                     {currentStage === 'success' && (
                       <>
@@ -1022,12 +1227,12 @@ export default function ActivityPanel() {
                   ) : currentStage === 'error' ? (
                     <span className="text-lg">⚠️</span>
                   ) : (
-                    <Loader2 className="w-5 h-5 text-[#7C3AED] animate-spin" />
+                    <span className="text-lg">{activeMember.emoji}</span>
                   )}
                 </div>
                 <div className="flex-1 min-w-0 text-left">
                   <p className="text-[13px] font-bold text-[#F8FAFC] leading-tight truncate">
-                    {funMessage}
+                    {activeMember.name} · {activeLine}
                   </p>
                   <p className="text-[11px] text-[#94A3B8] mt-0.5">
                     {meta.label} • {progress}%

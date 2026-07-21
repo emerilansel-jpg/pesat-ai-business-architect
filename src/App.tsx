@@ -21,9 +21,11 @@ import { MAIN_SYSTEM_PROMPT } from './services/mainPrompt';
 export const InputFocusContext = createContext<{
   trigger: number;
   increment: () => void;
+  prefill: (text: string) => void;
 }>({
   trigger: 0,
   increment: () => {},
+  prefill: () => {},
 });
 
 const FIRST_MESSAGE_FOCUS = `\n\n## FOKUS PESAN PERTAMA (WAJIB)\nIni adalah pesan pertama dari user.\n\n### JIKA USER MENYEBUTKAN BRAND ATAU NAMA BISNIS\nLakukan DEEP RESEARCH sekarang juga pakai web search result yang sudah disertakan di konteks. Berikan:\n- impression tajam tentang brand mereka (positioning, produk, target market),\n- kompetitor utama dan market dynamics,\n- interesting facts yang relevan,\n- beberapa kemungkinan challenge bisnis mereka.\nPisahkan: fakta / estimasi / hipotesis. Buat user terkesan dengan kedalaman riset anda.\n\nSetelah riset, AKHIRI respons WAJIB dengan pertanyaan challenge utama dan 6 pilihan multiple choice PERSIS seperti ini:\n[CHOICE:Tingkatkan omset miliaran|Hemat ratusan juta|Brand saya dipercaya & muncul di AI Search|Cegah Fraud ratusan juta|Business Intelligence|Forecast (prediksi) arah usaha|Lainnya (ketik sendiri)]\n\nPenting: pilihan di atas HARUS muncul utuh dan tidak boleh diubah teksnya. Ini adalah 6 challenge utama yang user pilih untuk validasi arah diagnosis.\n\n### JIKA USER BELUM MENYEBUT BRAND\nJANGAN langsung kasih solusi final. JANGAN berpanjang-panjang.\nSapa user dengan ramah, perkenalkan diri sebagai Pesat AI Advisor, lalu tanya challenge utama bisnis mereka saat ini.\nAkhiri dengan pilihan multiple choice PERSIS seperti ini:\n[CHOICE:Tingkatkan omset miliaran|Hemat ratusan juta|Brand saya dipercaya & muncul di AI Search|Cegah Fraud ratusan juta|Business Intelligence|Forecast (prediksi) arah usaha|Lainnya (ketik sendiri)]\nPanjang maksimal 2-3 paragraf pendek.`;
@@ -61,6 +63,7 @@ function ChatInterface() {
   const [isTyping, setIsTyping] = useState(false);
   const [lastUserMessage, setLastUserMessage] = useState<string | null>(null);
   const [focusTrigger, setFocusTrigger] = useState(0);
+  const [prefillText, setPrefillText] = useState('');
   const { addLog, updateLastLog, markLastDone, finishLog, clearLogs, setProcessing, setStage } =
     useActivity();
   const lastUserMessageRef = useRef<string | null>(null);
@@ -95,6 +98,11 @@ function ChatInterface() {
   }, []);
 
   const focusInput = useCallback(() => {
+    setFocusTrigger((t) => t + 1);
+  }, []);
+
+  const prefillInput = useCallback((text: string) => {
+    setPrefillText(text);
     setFocusTrigger((t) => t + 1);
   }, []);
 
@@ -387,7 +395,7 @@ function ChatInterface() {
               transition={{ duration: 0.4, ease: [0.16, 1, 0.3, 1] }}
               className="absolute inset-0 z-10"
             >
-              <WelcomeScreen />
+              <WelcomeScreen onPickExample={prefillInput} />
             </motion.div>
           ) : null}
         </AnimatePresence>
@@ -414,9 +422,9 @@ function ChatInterface() {
 
       {/* Input Bar */}
       <InputFocusContext.Provider
-        value={{ trigger: focusTrigger, increment: focusInput }}
+        value={{ trigger: focusTrigger, increment: focusInput, prefill: prefillInput }}
       >
-        <InputBar onSend={handleSendMessage} disabled={isTyping} />
+        <InputBar onSend={handleSendMessage} disabled={isTyping} prefill={prefillText} />
       </InputFocusContext.Provider>
     </div>
   );

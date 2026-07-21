@@ -1,9 +1,29 @@
 import { memo, useMemo } from 'react';
 import { motion } from 'framer-motion';
+import { Sparkles } from 'lucide-react';
 
 const easeOutExpo: [number, number, number, number] = [0.16, 1, 0.3, 1];
 
-const WelcomeScreen = memo(function WelcomeScreen() {
+interface WelcomeScreenProps {
+  onPickExample?: (text: string) => void;
+}
+
+const EXAMPLES = [
+  {
+    label: 'Contoh brand',
+    text: 'Brand saya adalah Pesat AI, dengan domain pesat.ai didirikan oleh Nell VH praktisi SEO/AI Search dan AI internasional. Kami membantu UKM menemukan apps dan sistem AI yang paling cocok untuk menyelesaikan tantangan bisnis mereka.',
+  },
+  {
+    label: 'Contoh singkat',
+    text: 'Bisnis saya toko kue online di Jakarta, omset 50jt/bulan, mau scale tapi tim admin sudah overload.',
+  },
+  {
+    label: 'Contoh UKM',
+    text: 'Saya punya brand skincare lokal, jual lewat Shopee dan TikTok Shop,Repeat order-nya rendah dan CS kewalahan jawab pertanyaan repetitif.',
+  },
+];
+
+const WelcomeScreen = memo(function WelcomeScreen({ onPickExample }: WelcomeScreenProps) {
   const particles = useMemo(() => {
     return Array.from({ length: 40 }, (_, i) => ({
       id: i,
@@ -109,6 +129,42 @@ const WelcomeScreen = memo(function WelcomeScreen() {
         Apps/AI yang paling cocok untuk menyelesaikan tantangan bisnis yang
         paling mahal dan paling layak diselesaikan.
       </motion.p>
+
+      {/* Example chips */}
+      <motion.div
+        initial={{ opacity: 0, y: 20 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ duration: 0.5, ease: easeOutExpo, delay: 1.6 }}
+        className="relative z-10 w-full max-w-[560px] flex flex-col gap-2 mt-2"
+      >
+        <div className="flex items-center justify-center gap-1.5 text-[11px] md:text-xs font-medium text-slate-400 lg:text-[#64748B]">
+          <Sparkles className="w-3 h-3" />
+          <span>Belum tahu harus mulai dari mana? Coba salah satu contoh:</span>
+        </div>
+        <div className="flex flex-col gap-2">
+          {EXAMPLES.map((ex, i) => (
+            <motion.button
+              key={i}
+              whileHover={{ scale: 1.01, y: -1 }}
+              whileTap={{ scale: 0.99 }}
+              onClick={() => onPickExample?.(ex.text)}
+              className="group text-left px-4 py-3 rounded-2xl border border-slate-200/80 lg:border-[rgba(124,58,237,0.2)] bg-white/70 lg:bg-[rgba(26,31,53,0.6)] backdrop-blur-sm hover:border-[#7C3AED] lg:hover:bg-[rgba(124,58,237,0.08)] transition-all"
+            >
+              <div className="flex items-center gap-2 mb-1">
+                <span className="text-[10px] md:text-[11px] font-semibold uppercase tracking-wider text-[#7C3AED] lg:text-[#A78BFA]">
+                  {ex.label}
+                </span>
+                <span className="text-[10px] text-slate-400 lg:text-[#475569] opacity-0 group-hover:opacity-100 transition-opacity">
+                  klik untuk pakai →
+                </span>
+              </div>
+              <p className="text-[12px] md:text-[13px] text-slate-600 lg:text-[#CBD5E1] leading-relaxed line-clamp-2">
+                {ex.text}
+              </p>
+            </motion.button>
+          ))}
+        </div>
+      </motion.div>
     </div>
   );
 });

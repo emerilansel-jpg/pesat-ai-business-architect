@@ -32,6 +32,7 @@ export interface Message {
 interface ChatMessageProps {
   message: Message;
   isLastAI?: boolean;
+  aiMessageIndex?: number;
   onRetry?: () => void;
   onChoiceClick?: (choice: string) => void;
 }
@@ -88,6 +89,7 @@ function parseCTA(text: string): { cleanText: string; ctaUrl: string | null } {
 const ChatMessage = memo(function ChatMessage({
   message,
   isLastAI = false,
+  aiMessageIndex = 0,
   onRetry,
   onChoiceClick,
 }: ChatMessageProps) {
@@ -111,9 +113,14 @@ const ChatMessage = memo(function ChatMessage({
     const lower = c.trim().toLowerCase();
     return !lower.startsWith('lainnya') && !lower.includes('ketik sendiri');
   });
-  const { cleanText: ctaCleanText, ctaUrl } = isAI
+  const { cleanText: ctaCleanText, ctaUrl: parsedCtaUrl } = isAI
     ? parseCTA(cleanText)
     : { cleanText, ctaUrl: null };
+  // Fallback: starting from the 3rd AI message, always surface a WhatsApp CTA
+  // even if the AI did not emit a [CTA:...] tag. Keeps the door open for warm leads.
+  const WHATSAPP_FALLBACK_URL = 'https://wa.me/6281290401240';
+  const ctaUrl =
+    parsedCtaUrl || (isAI && aiMessageIndex >= 3 ? WHATSAPP_FALLBACK_URL : null);
 
   // If AI mentions a brand name, remember it for the user avatar
   useEffect(() => {
@@ -382,7 +389,7 @@ const ChatMessage = memo(function ChatMessage({
                 rel="noopener noreferrer"
                 className="mt-4 inline-flex items-center gap-2 px-5 py-3 bg-[#22C55E] hover:bg-[#16A34A] text-white rounded-xl font-semibold text-[14px] shadow-[0_4px_16px_rgba(34,197,94,0.3)] transition-all active:scale-95"
               >
-                Chat WhatsApp
+                {parsedCtaUrl ? 'Chat WhatsApp' : 'Bicara langsung via WhatsApp'}
               </a>
             )}
 
