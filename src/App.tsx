@@ -12,7 +12,8 @@ import Admin from './pages/Admin';
 import Version from './pages/Version';
 import { sendMessage, webSearch, generateImage } from './services/ai';
 import { getInlineVizPrompt, parseInlineImages, buildDallePrompt, getPollinationsUrl } from './services/visualization';
-import { loadSettings } from './services/settings';
+import { loadSettings, saveSettings, DEFAULT_SETTINGS } from './services/settings';
+import { fetchServerConfig } from './services/serverConfig';
 import { getActivityMessage, generateActivityMessages } from './services/activityMessages';
 import { MAIN_SYSTEM_PROMPT } from './services/mainPrompt';
 
@@ -69,6 +70,32 @@ function ChatInterface() {
   useEffect(() => {
     lastUserMessageRef.current = lastUserMessage;
   }, [lastUserMessage]);
+
+  useEffect(() => {
+    fetchServerConfig().then((serverConfig) => {
+      if (!serverConfig) return;
+      const localSettings = loadSettings();
+      const serverUpdated = new Date(serverConfig.updatedAt).getTime();
+      const localUpdated = localSettings.updatedAt ? new Date(localSettings.updatedAt).getTime() : 0;
+      if (serverUpdated <= localUpdated) return;
+
+      const next = {
+        ...localSettings,
+        textProvider: serverConfig.textProvider,
+        imageProvider: serverConfig.imageProvider,
+        openaiModel: serverConfig.openaiModel,
+        deepseekModel: serverConfig.deepseekModel,
+        autoImageGen: serverConfig.autoImageGen,
+        imageStyle: serverConfig.imageStyle,
+        maxImagesPerResponse: serverConfig.maxImagesPerResponse,
+        webSearchEnabled: serverConfig.webSearchEnabled,
+        stepPrompts: serverConfig.stepPrompts.length ? serverConfig.stepPrompts : localSettings.stepPrompts,
+        promptVersion: serverConfig.promptVersion,
+        updatedAt: serverConfig.updatedAt,
+      };
+      saveSettings(next);
+    });
+  }, []);
 
   const focusInput = useCallback(() => {
     setFocusTrigger((t) => t + 1);
