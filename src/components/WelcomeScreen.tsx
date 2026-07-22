@@ -94,47 +94,35 @@ const WelcomeScreen = memo(function WelcomeScreen({ onPickExample }: WelcomeScre
         className="relative z-10 text-[26px] md:text-[36px] font-bold text-center leading-tight tracking-tight"
       >
         <span className="text-slate-900 lg:gradient-text">
-          Pesat AI Business Architect
+          Sebelum Anda bayar mahal, tanya dulu.
         </span>
       </motion.h1>
 
-      {/* Subtitle line 1 */}
+      {/* Subtitle line 1 — punchy hook */}
       <motion.p
         initial={{ opacity: 0, y: 20 }}
         animate={{ opacity: 1, y: 0 }}
         transition={{ duration: 0.5, ease: easeOutExpo, delay: 1.0 }}
         className="relative z-10 text-[16px] md:text-[18px] font-semibold text-slate-700 text-center max-w-[520px] leading-snug lg:text-[#F8FAFC]"
       >
-        Naikkan omset, hemat banyak, tanpa harus tambah karyawan.
+        Ceritakan bisnis Anda. Tim AI kami akan mendiagnosa dan menemukan solusi paling masuk akal.
       </motion.p>
 
-      {/* Subtitle line 2 */}
+      {/* Subtitle line 2 — curiosity */}
       <motion.p
         initial={{ opacity: 0, y: 20 }}
         animate={{ opacity: 1, y: 0 }}
         transition={{ duration: 0.5, ease: easeOutExpo, delay: 1.2 }}
-        className="relative z-10 text-[14px] md:text-[15px] font-medium text-[#7C3AED] text-center max-w-[480px] leading-relaxed lg:text-[#A78BFA]"
+        className="relative z-10 text-[13px] md:text-[14px] font-medium text-[#7C3AED] text-center max-w-[480px] leading-relaxed lg:text-[#A78BFA]"
       >
-        AI yang belajar bisnis Anda, bukan bisnis Anda yang belajar AI.
-      </motion.p>
-
-      {/* Subtitle line 3 */}
-      <motion.p
-        initial={{ opacity: 0, y: 20 }}
-        animate={{ opacity: 1, y: 0 }}
-        transition={{ duration: 0.5, ease: easeOutExpo, delay: 1.4 }}
-        className="relative z-10 text-[13px] md:text-[14px] font-normal text-slate-500 text-center max-w-[520px] leading-relaxed lg:text-[#CBD5E1]"
-      >
-        Ceritakan bisnis atau brand Anda, dan saya bantu carikan solusi
-        Apps/AI yang paling cocok untuk menyelesaikan tantangan bisnis yang
-        paling mahal dan paling layak diselesaikan.
+        Bisa jadi ada biaya tersembunyi yang selama ini Anda anggap normal.
       </motion.p>
 
       {/* Example chips */}
       <motion.div
         initial={{ opacity: 0, y: 20 }}
         animate={{ opacity: 1, y: 0 }}
-        transition={{ duration: 0.5, ease: easeOutExpo, delay: 1.6 }}
+        transition={{ duration: 0.5, ease: easeOutExpo, delay: 1.4 }}
         className="relative z-10 w-full max-w-[560px] flex flex-col gap-2 mt-2"
       >
         <div className="flex items-center justify-center gap-1.5 text-[11px] md:text-xs font-medium text-slate-400 lg:text-[#64748B]">

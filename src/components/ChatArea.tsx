@@ -27,6 +27,20 @@ const ChatArea = memo(function ChatArea({ messages, isTyping, onRetry, onChoiceC
     }
   }, []);
 
+  // Scroll so that the TOP of the most recent AI message is at the top of the
+  // viewport — i.e. the user starts reading the AI answer from its beginning.
+  // Used on mobile after the AI finishes. A small negative offset keeps a
+  // little breathing room above the bubble.
+  const scrollToLastAITop = useCallback(() => {
+    const container = scrollRef.current;
+    if (!container) return;
+    const nodes = container.querySelectorAll<HTMLElement>('[data-ai-message="true"]');
+    const last = nodes[nodes.length - 1];
+    if (!last) return;
+    const targetTop = last.offsetTop - 12; // 12px breathing room above
+    container.scrollTo({ top: Math.max(0, targetTop), behavior: 'smooth' });
+  }, []);
+
   // Detect mobile once — used to gate aggressive auto-scroll so the AI's
   // long answer doesn't yank the viewport down on phones.
   const isMobileViewport = useCallback(() => {
@@ -38,8 +52,9 @@ const ChatArea = memo(function ChatArea({ messages, isTyping, onRetry, onChoiceC
   // - While the user is waiting (typing indicator ON): always smooth-scroll to bottom
   //   so the typing indicator stays visible.
   // - When a NEW AI message just landed (typing went true->false AND message count grew):
-  //   on desktop, scroll to bottom as before; on mobile, leave the scroll position alone
-  //   so the user can read from the top. A "jump to latest" pill stays accessible.
+  //   - Desktop: scroll to bottom (default, keeps actions visible).
+  //   - Mobile: scroll to the TOP of the new AI answer so the user reads from the start,
+  //     not the tail of the response.
   // - When the user sends a new message (length grew but typing didn't flip): scroll to bottom.
   useEffect(() => {
     const len = messages.length;
@@ -55,16 +70,17 @@ const ChatArea = memo(function ChatArea({ messages, isTyping, onRetry, onChoiceC
       scrollToBottom();
     } else if (typingTurnedOff && grew) {
       // AI just finished an answer
-      if (!isMobileViewport()) {
+      if (isMobileViewport()) {
+        // On mobile: bring the user to the START of the AI answer, not the end.
+        scrollToLastAITop();
+      } else {
         scrollToBottom();
       }
-      // On mobile: do nothing. Let the user scroll at their own pace.
-      // The ScrollToBottom pill appears automatically if they're not near the end.
     }
 
     prevMessagesLenRef.current = len;
     prevIsTypingRef.current = isTyping;
-  }, [messages.length, isTyping, scrollToBottom, isMobileViewport]);
+  }, [messages.length, isTyping, scrollToBottom, scrollToLastAITop, isMobileViewport]);
 
   // Track scroll position
   const handleScroll = useCallback(() => {

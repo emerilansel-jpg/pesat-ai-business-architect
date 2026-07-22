@@ -78,7 +78,7 @@ const InputBar = memo(function InputBar({ onSend, disabled = false, prefill = ''
             value={input}
             onChange={(e) => setInput(e.target.value)}
             onKeyDown={handleKeyDown}
-            placeholder="Ceritakan bisnis Anda… contoh: Brand saya adalah X, domain X.com, produk utama X..."
+            placeholder="Ceritakan bisnis Anda…"
             disabled={disabled}
             minRows={1}
             maxRows={4}

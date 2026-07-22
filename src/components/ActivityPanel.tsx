@@ -14,7 +14,7 @@ import {
   Coffee,
   AlertTriangle,
 } from 'lucide-react';
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useMemo } from 'react';
 
 const stageMeta: Record<
   ActivityIcon,
@@ -335,42 +335,92 @@ const funFacts = [
 ];
 
 /**
- * Pick a cast member for the current icon and rotate it on a cadence so the
- * panel feels like multiple experts drifting in and out of the war room.
- * Returns the active member plus the line they're currently "saying".
+ * Return Pesat as the always-present leader plus 2-3 pahlawan workers who are
+ * "on duty" for the current stage. The worker set rotates on a cadence so the
+ * panel reads as a real team working in parallel, not one mascot.
+ *
+ * Each stage has a pool of relevant experts. We always show Pesat (leader)
+ * plus a rotating subset of 2 workers; one of them is flagged "active" so the
+ * caption can highlight who's doing the main task right now.
  */
-function useActiveCastMember(icon: ActivityIcon, isProcessing: boolean) {
-  const members = CAST[icon] || CAST.thinking;
-  const [index, setIndex] = useState(() => Math.floor(Math.random() * members.length));
+const STAGE_WORKERS: Record<ActivityIcon, CastMember[]> = {
+  thinking: [
+    CAST.thinking[0], CAST.thinking[1], CAST.analyze[0], CAST.sparkle[0],
+  ].filter(Boolean) as CastMember[],
+  search: [
+    CAST.search[0], CAST.search[1], CAST.analyze[1],
+  ].filter(Boolean) as CastMember[],
+  analyze: [
+    CAST.analyze[0], CAST.analyze[1], CAST.sparkle[1],
+  ].filter(Boolean) as CastMember[],
+  sparkle: [
+    CAST.sparkle[0], CAST.sparkle[1], CAST.thinking[0],
+  ].filter(Boolean) as CastMember[],
+  meeting: [
+    CAST.meeting[0], CAST.sparkle[0], CAST.analyze[0],
+  ].filter(Boolean) as CastMember[],
+  image: [
+    CAST.image[0], CAST.image[1], CAST.design[1],
+  ].filter(Boolean) as CastMember[],
+  coffee: [
+    CAST.coffee[0], CAST.thinking[0],
+  ].filter(Boolean) as CastMember[],
+  design: [
+    CAST.design[0], CAST.design[1], CAST.image[0],
+  ].filter(Boolean) as CastMember[],
+  code: [
+    CAST.code[0], CAST.code[1], CAST.analyze[0],
+  ].filter(Boolean) as CastMember[],
+  deploy: [
+    CAST.deploy[0], CAST.code[0], CAST.search[0],
+  ].filter(Boolean) as CastMember[],
+  success: CAST.success,
+  error: CAST.error,
+};
+
+const PESAT_LEADER: CastMember = {
+  name: 'Pesat',
+  role: 'Leader',
+  emoji: '🟣',
+  accent: '#7C3AED',
+  lines: [
+    'Pesat mengkoordinasikan tim…',
+    'Pesat mengarahkan strategi…',
+  ],
+};
+
+function pickRandom<T>(arr: T[], n: number): T[] {
+  const copy = [...arr];
+  const out: T[] = [];
+  while (out.length < n && copy.length) {
+    out.push(copy.splice(Math.floor(Math.random() * copy.length), 1)[0]);
+  }
+  return out;
+}
+
+function useActiveCast(icon: ActivityIcon, isProcessing: boolean) {
+  const pool = STAGE_WORKERS[icon] || STAGE_WORKERS.thinking;
+  const [tick, setTick] = useState(0);
 
   useEffect(() => {
     if (!isProcessing) return;
-    // re-pick whenever the stage/icon changes
-    setIndex(Math.floor(Math.random() * members.length));
-    // rotate every 3.5s if there are multiple members, simulating handoff
-    if (members.length <= 1) return;
-    const interval = window.setInterval(() => {
-      setIndex((prev) => (prev + 1) % members.length);
-    }, 3500);
+    setTick((t) => t + 1);
+    const interval = window.setInterval(() => setTick((t) => t + 1), 3200);
     return () => window.clearInterval(interval);
-  }, [icon, isProcessing, members.length]);
+  }, [icon, isProcessing]);
 
-  const member = members[index] || members[0];
-  const line = member.lines[Math.floor(Math.random() * member.lines.length)];
-  return { member, line };
+  // Pick 2 workers (3 if pool is rich) + derive the active speaker
+  const workers = useMemo(() => {
+    const count = pool.length >= 3 ? 3 : Math.min(2, pool.length);
+    return pickRandom(pool, count);
+    // re-pick whenever stage or tick changes
+  }, [pool, tick]);
+
+  const activeWorker = workers[0] || pool[0];
+  const line = activeWorker?.lines[Math.floor(Math.random() * activeWorker.lines.length)] || PESAT_LEADER.lines[0];
+
+  return { leader: PESAT_LEADER, workers, activeWorker, line };
 }
-
-const stageSpeed: Record<ActivityStage, number> = {
-  idle: 1.2,
-  thinking: 1.2,
-  searching: 0.9,
-  analyzing: 0.7,
-  crafting: 0.5,
-  meeting: 0.6,
-  image: 0.6,
-  success: 0.35,
-  error: 0,
-};
 
 const stageToIcon: Record<ActivityStage, ActivityIcon> = {
   idle: 'thinking',
@@ -384,195 +434,6 @@ const stageToIcon: Record<ActivityStage, ActivityIcon> = {
   error: 'error',
 };
 
-function CendekiaBot({
-  icon,
-  stage,
-  isProcessing,
-}: {
-  icon: ActivityIcon;
-  stage: ActivityStage;
-  isProcessing: boolean;
-}) {
-  const isSuccess = icon === 'success';
-  const isError = icon === 'error';
-  const walkDuration = stageSpeed[stage] || 1;
-
-  return (
-    <div className="relative w-24 h-24 mx-auto">
-      {/* Glow ring */}
-      <motion.div
-        animate={{
-          scale: isProcessing ? [1, 1.15, 1] : [1, 1.05, 1],
-          opacity: isProcessing ? [0.4, 0.6, 0.4] : [0.3, 0.4, 0.3],
-        }}
-        transition={{ duration: 1.5, repeat: Infinity, ease: 'easeInOut' }}
-        className="absolute inset-0 rounded-full bg-gradient-to-r from-[#7C3AED]/40 to-[#3B82F6]/40 blur-xl"
-      />
-
-      {/* Robot character */}
-      <motion.div
-        animate={
-          isProcessing
-            ? { y: [0, -8, 0, -4, 0], rotate: [0, -3, 0, 3, 0] }
-            : isSuccess
-            ? { y: [0, -12, 0], rotate: [0, -10, 0, 10, 0] }
-            : { y: [0, -2, 0], rotate: 0 }
-        }
-        transition={{
-          duration: isSuccess ? 0.4 : isError ? 0.6 : walkDuration,
-          repeat: isError ? 0 : Infinity,
-          ease: 'easeInOut',
-        }}
-        className="relative z-10 w-24 h-24"
-      >
-        <svg viewBox="0 0 100 100" className="w-full h-full drop-shadow-lg">
-          {/* Graduation cap + smart antenna */}
-          <motion.path
-            d="M22 22 L50 12 L78 22 L50 32 Z"
-            fill="#0B0F1A"
-            stroke="#7C3AED"
-            strokeWidth="2.5"
-            strokeLinejoin="round"
-            animate={isSuccess ? { y: [0, -2, 0] } : {}}
-            transition={{ duration: 0.4, repeat: Infinity }}
-          />
-          <rect x="22" y="22" width="56" height="5" rx="2" fill="#0B0F1A" stroke="#7C3AED" strokeWidth="2.5" />
-          <line x1="74" y1="22" x2="74" y2="30" stroke="#FCD34D" strokeWidth="2" strokeLinecap="round" />
-          <motion.circle
-            cx="74"
-            cy="30"
-            r="2.5"
-            fill="#FCD34D"
-            animate={isProcessing ? { opacity: [0.5, 1, 0.5], scale: [1, 1.2, 1] } : {}}
-            transition={{ duration: 1, repeat: Infinity }}
-          />
-          {/* Side antenna */}
-          <line x1="83" y1="28" x2="83" y2="18" stroke="#7C3AED" strokeWidth="2" strokeLinecap="round" />
-          <motion.circle
-            cx="83"
-            cy="18"
-            r="3"
-            fill="#3B82F6"
-            animate={isProcessing ? { opacity: [0.5, 1, 0.5], scale: [1, 1.3, 1] } : {}}
-            transition={{ duration: 0.8, repeat: Infinity, delay: 0.2 }}
-          />
-
-          {/* Head */}
-          <rect x="25" y="28" width="50" height="40" rx="16" fill="#F8FAFC" />
-          <rect x="25" y="28" width="50" height="40" rx="16" fill="url(#batik)" opacity="0.18" />
-
-          {/* Eyes */}
-          <motion.circle
-            cx="38"
-            cy="42"
-            r="8"
-            fill="#0B0F1A"
-            animate={isProcessing ? { scaleY: [1, 0.1, 1] } : { scaleY: 1 }}
-            transition={{ duration: 0.2, repeat: isProcessing ? 3 : 0, delay: 0.5, repeatDelay: 1.5 }}
-          />
-          <motion.circle
-            cx="62"
-            cy="42"
-            r="8"
-            fill="#0B0F1A"
-            animate={isProcessing ? { scaleY: [1, 0.1, 1] } : { scaleY: 1 }}
-            transition={{ duration: 0.2, repeat: isProcessing ? 3 : 0, delay: 0.5, repeatDelay: 1.5 }}
-          />
-          <circle cx="40" cy="40" r="2.5" fill="#F8FAFC" />
-          <circle cx="64" cy="40" r="2.5" fill="#F8FAFC" />
-
-          {/* Mouth */}
-          <motion.path
-            d={isSuccess ? 'M38 56 Q50 64 62 56' : isError ? 'M42 60 Q50 54 58 60' : 'M40 58 Q50 64 60 58'}
-            stroke="#0B0F1A"
-            strokeWidth="3"
-            strokeLinecap="round"
-            fill="transparent"
-          />
-
-          {/* Body with batik pattern */}
-          <defs>
-            <pattern id="batik" x="0" y="0" width="10" height="10" patternUnits="userSpaceOnUse">
-              <rect width="10" height="10" fill="#7C3AED" />
-              <circle cx="5" cy="5" r="2" fill="#FCD34D" />
-              <rect x="1" y="1" width="2" height="2" fill="#3B82F6" />
-              <rect x="7" y="7" width="2" height="2" fill="#3B82F6" />
-            </pattern>
-          </defs>
-          <rect x="30" y="68" width="40" height="26" rx="10" fill="#7C3AED" />
-          <rect x="30" y="68" width="40" height="26" rx="10" fill="url(#batik)" opacity="0.3" />
-          {/* Pesat badge */}
-          <circle cx="50" cy="81" r="8" fill="#F8FAFC" opacity="0.9" />
-          <text
-            x="50"
-            y="84.5"
-            textAnchor="middle"
-            fontSize="10"
-            fontWeight="bold"
-            fill="#7C3AED"
-            fontFamily="system-ui, sans-serif"
-          >
-            P
-          </text>
-
-          {/* Arms */}
-          <motion.line
-            x1="30"
-            y1="75"
-            x2="15"
-            y2="80"
-            stroke="#7C3AED"
-            strokeWidth="4"
-            strokeLinecap="round"
-            animate={isProcessing ? { x2: [15, 10, 15], y2: [70, 55, 70] } : { x2: 15, y2: 80 }}
-          />
-          <motion.line
-            x1="70"
-            y1="75"
-            x2="85"
-            y2="80"
-            stroke="#7C3AED"
-            strokeWidth="4"
-            strokeLinecap="round"
-            animate={isProcessing ? { x2: [85, 90, 85], y2: [70, 55, 70] } : { x2: 85, y2: 80 }}
-          />
-
-          {/* Legs */}
-          <motion.line
-            x1="40"
-            y1="94"
-            x2="40"
-            y2="100"
-            stroke="#7C3AED"
-            strokeWidth="4"
-            strokeLinecap="round"
-            animate={isProcessing ? { y2: [100, 95, 100] } : {}}
-          />
-          <motion.line
-            x1="60"
-            y1="94"
-            x2="60"
-            y2="100"
-            stroke="#7C3AED"
-            strokeWidth="4"
-            strokeLinecap="round"
-            animate={isProcessing ? { y2: [100, 105, 100] } : {}}
-          />
-        </svg>
-      </motion.div>
-
-      {/* Shadow */}
-      <motion.div
-        animate={{
-          scale: isProcessing ? [1, 0.75, 1, 0.9, 1] : [1, 0.95, 1],
-          opacity: isProcessing ? [0.4, 0.2, 0.4, 0.3, 0.4] : [0.3, 0.25, 0.3],
-        }}
-        transition={{ duration: 1, repeat: Infinity, ease: 'easeInOut' }}
-        className="absolute -bottom-1 left-1/2 -translate-x-1/2 w-14 h-3 bg-black/40 rounded-full"
-      />
-    </div>
-  );
-}
 
 function WalkingDots() {
   return (
@@ -594,138 +455,8 @@ function WalkingDots() {
   );
 }
 
-function FloatingSparkles({ isProcessing }: { isProcessing: boolean }) {
-  const particles = [
-    { color: '#FCD34D', x: -40, y: -30, delay: 0, size: 4 },
-    { color: '#7C3AED', x: 40, y: -35, delay: 0.3, size: 3 },
-    { color: '#3B82F6', x: -45, y: 10, delay: 0.6, size: 3.5 },
-    { color: '#EC4899', x: 45, y: 15, delay: 0.9, size: 4 },
-    { color: '#F59E0B', x: -30, y: 40, delay: 1.2, size: 3 },
-    { color: '#22C55E', x: 35, y: 45, delay: 1.5, size: 3.5 },
-  ];
 
-  return (
-    <div className="absolute inset-0 pointer-events-none">
-      {particles.map((p, i) => (
-        <motion.div
-          key={i}
-          className="absolute rounded-full"
-          style={{
-            left: '50%',
-            top: '50%',
-            width: p.size,
-            height: p.size,
-            backgroundColor: p.color,
-            boxShadow: `0 0 8px ${p.color}`,
-            marginLeft: p.x,
-            marginTop: p.y,
-          }}
-          animate={{
-            y: [0, -12, 0, 8, 0],
-            x: [0, 6, 0, -6, 0],
-            opacity: isProcessing ? [0.4, 1, 0.4, 0.8, 0.4] : [0.2, 0.5, 0.2, 0.4, 0.2],
-            scale: [1, 1.3, 1, 1.1, 1],
-          }}
-          transition={{
-            duration: 2.5 + i * 0.3,
-            repeat: Infinity,
-            delay: p.delay,
-            ease: 'easeInOut',
-          }}
-        />
-      ))}
-    </div>
-  );
-}
 
-function PulseRing({ color }: { color: string }) {
-  return (
-    <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
-      <motion.div
-        initial={{ scale: 0.8, opacity: 0.8 }}
-        animate={{ scale: 1.8, opacity: 0 }}
-        transition={{ duration: 0.8, ease: 'easeOut' }}
-        className="w-24 h-24 rounded-full"
-        style={{ border: `2px solid ${color}` }}
-      />
-    </div>
-  );
-}
-
-function BotTrail({ color, isProcessing }: { color: string; isProcessing: boolean }) {
-  const trail = Array.from({ length: 5 }).map((_, i) => ({
-    id: i,
-    angle: (i * 72 + 30) * (Math.PI / 180),
-    distance: 28 + i * 6,
-    delay: i * 0.12,
-  }));
-
-  return (
-    <div className="absolute inset-0 pointer-events-none">
-      {trail.map((t) => {
-        const x = Math.cos(t.angle) * t.distance;
-        const y = Math.sin(t.angle) * t.distance;
-        return (
-          <motion.div
-            key={t.id}
-            className="absolute rounded-full"
-            style={{
-              left: '50%',
-              top: '50%',
-              width: 4,
-              height: 4,
-              marginLeft: x - 2,
-              marginTop: y - 2,
-              backgroundColor: color,
-              boxShadow: `0 0 6px ${color}`,
-            }}
-            animate={{
-              scale: isProcessing ? [1, 1.5, 1] : [1, 1.2, 1],
-              opacity: isProcessing ? [0.2, 0.7, 0.2] : [0.1, 0.3, 0.1],
-              x: [0, x * 0.3, 0],
-              y: [0, y * 0.3, 0],
-            }}
-            transition={{
-              duration: 1.6,
-              repeat: Infinity,
-              delay: t.delay,
-              ease: 'easeInOut',
-            }}
-          />
-        );
-      })}
-    </div>
-  );
-}
-
-function StageBadge({ stage, color }: { stage: ActivityStage; color: string }) {
-  const labels: Record<ActivityStage, string> = {
-    idle: 'Ready',
-    thinking: 'Think',
-    searching: 'Research',
-    analyzing: 'Analyze',
-    crafting: 'Craft',
-    meeting: 'Meeting',
-    image: 'Design',
-    success: 'Done!',
-    error: 'Oops',
-  };
-
-  return (
-    <div className="absolute -top-3 left-1/2 -translate-x-1/2 pointer-events-none">
-      <motion.div
-        initial={{ opacity: 0, y: 10, scale: 0.6 }}
-        animate={{ opacity: 1, y: -18, scale: 1 }}
-        exit={{ opacity: 0, y: -28, scale: 0.8 }}
-        transition={{ type: 'spring', stiffness: 400, damping: 25 }}
-        className="px-2.5 py-1 rounded-full text-[10px] font-bold text-white shadow-lg"
-        style={{ backgroundColor: color }}
-      >
-        {labels[stage]}
-      </motion.div>
-    </div>
-  );
-}
 
 function ActivityLogItem({ log, isCurrent }: { log: ActivityItem; isCurrent: boolean }) {
   return (
@@ -854,6 +585,143 @@ function Confetti() {
   );
 }
 
+/**
+ * CastRing — Pesat in the center as leader, with 2-3 worker pahlawan avatars
+ * orbiting around him. The active worker has a glowing ring + label.
+ * This replaces the old single-mascot mount point and makes the panel read
+ * as a real team working in parallel.
+ */
+function CastRing({
+  leader,
+  workers,
+  activeWorker,
+  stageColor,
+  isProcessing,
+}: {
+  leader: CastMember;
+  workers: CastMember[];
+  activeWorker?: CastMember;
+  stageColor: string;
+  isProcessing: boolean;
+}) {
+  const size = 144; // ring diameter area
+  const center = size / 2;
+  const leaderRadius = 26;
+  const workerRadius = 18;
+  // place workers on a circle around the leader
+  const workerRingRadius = 48;
+
+  return (
+    <div className="relative mx-auto" style={{ width: size, height: size }}>
+      {/* pulse backdrop */}
+      <motion.div
+        className="absolute inset-0 pointer-events-none rounded-full"
+        style={{ background: `radial-gradient(circle, ${stageColor}22, transparent 65%)` }}
+        animate={{ opacity: isProcessing ? [0.25, 0.55, 0.25] : [0.15, 0.25, 0.15] }}
+        transition={{ duration: 2.2, repeat: Infinity, ease: 'easeInOut' }}
+      />
+
+      {/* Leader: Pesat in the center */}
+      <motion.div
+        className="absolute rounded-full flex items-center justify-center text-white font-bold shadow-lg"
+        style={{
+          width: leaderRadius * 2,
+          height: leaderRadius * 2,
+          left: center - leaderRadius,
+          top: center - leaderRadius,
+          background: `radial-gradient(circle at 30% 30%, ${leader.accent}, #4C1D95)`,
+          boxShadow: `0 0 18px ${leader.accent}66`,
+        }}
+        animate={isProcessing ? { scale: [1, 1.05, 1] } : {}}
+        transition={{ duration: 1.4, repeat: Infinity, ease: 'easeInOut' }}
+      >
+        <span className="text-[20px] leading-none">{leader.emoji}</span>
+      </motion.div>
+      <div
+        className="absolute text-center"
+        style={{ left: center - 40, top: center + leaderRadius + 4, width: 80 }}
+      >
+        <p className="text-[10px] font-semibold text-[#F8FAFC] leading-tight">{leader.name}</p>
+        <p className="text-[8px] text-[#A78BFA] leading-tight">{leader.role}</p>
+      </div>
+
+      {/* Workers orbiting */}
+      {workers.map((w, i) => {
+        const angle = (i / Math.max(workers.length, 1)) * Math.PI * 2 - Math.PI / 2;
+        const x = center + Math.cos(angle) * workerRingRadius - workerRadius;
+        const y = center + Math.sin(angle) * workerRingRadius - workerRadius;
+        const isActive = activeWorker && w.name === activeWorker.name;
+        return (
+          <motion.div
+            key={w.name + i}
+            className="absolute rounded-full flex items-center justify-center"
+            initial={{ opacity: 0, scale: 0.5 }}
+            animate={{
+              opacity: 1,
+              scale: 1,
+              x: [0, Math.cos(angle) * 3, 0],
+              y: [0, Math.sin(angle) * 3, 0],
+            }}
+            exit={{ opacity: 0, scale: 0.5 }}
+            transition={{
+              duration: 0.45,
+              ease: [0.16, 1, 0.3, 1],
+              x: { duration: 3, repeat: Infinity, ease: 'easeInOut' },
+              y: { duration: 3, repeat: Infinity, ease: 'easeInOut' },
+            }}
+            style={{
+              width: workerRadius * 2,
+              height: workerRadius * 2,
+              left: x,
+              top: y,
+              background: `radial-gradient(circle at 30% 30%, ${w.accent}, ${w.accent}99)`,
+              boxShadow: isActive
+                ? `0 0 0 2px #fff, 0 0 14px ${w.accent}`
+                : `0 0 8px ${w.accent}55`,
+              zIndex: isActive ? 5 : 2,
+            }}
+            title={`${w.name} · ${w.role}`}
+          >
+            <span className="text-[14px] leading-none">{w.emoji}</span>
+            {/* floating label for active worker */}
+            {isActive && (
+              <motion.span
+                layoutId="active-worker-label"
+                className="absolute -bottom-4 whitespace-nowrap text-[9px] font-semibold text-white px-1.5 py-0.5 rounded-full"
+                style={{ background: w.accent }}
+              >
+                {w.name}
+              </motion.span>
+            )}
+          </motion.div>
+        );
+      })}
+
+      {/* connecting lines leader <-> workers (svg overlay) */}
+      <svg className="absolute inset-0 pointer-events-none" width={size} height={size}>
+        {workers.map((w, i) => {
+          const angle = (i / Math.max(workers.length, 1)) * Math.PI * 2 - Math.PI / 2;
+          const x2 = center + Math.cos(angle) * workerRingRadius;
+          const y2 = center + Math.sin(angle) * workerRingRadius;
+          return (
+            <line
+              key={w.name + '-line-' + i}
+              x1={center}
+              y1={center}
+              x2={x2}
+              y2={y2}
+              stroke={stageColor}
+              strokeOpacity={0.25}
+              strokeWidth={1}
+              strokeDasharray="2 3"
+            />
+          );
+        })}
+      </svg>
+    </div>
+  );
+}
+
 export default function ActivityPanel() {
   const { logs, isProcessing, currentStage, clearLogs } = useActivity();
   const [desktopCollapsed, setDesktopCollapsed] = useState(false);
@@ -863,7 +731,7 @@ export default function ActivityPanel() {
   const currentLog = logs[logs.length - 1];
   const currentIcon = currentLog?.icon || stageToIcon[currentStage] || 'thinking';
   const meta = stageMeta[currentIcon] || stageMeta.thinking;
-  const { member: activeMember, line: activeLine } = useActiveCastMember(currentIcon, isProcessing);
+  const { leader, workers, activeWorker, line: activeLine } = useActiveCast(currentIcon, isProcessing);
   const dragControls = useDragControls();
 
   const currentLogId = currentLog?.id;
@@ -962,33 +830,30 @@ export default function ActivityPanel() {
 
                 <div className="flex-1 overflow-y-auto p-4 scrollbar-chat">
                   <div className="flex flex-col items-center gap-2 mb-2">
-                    <div key={currentIcon} className="relative w-24 h-24 mx-auto">
-                      <FloatingSparkles isProcessing={isProcessing} />
-                      <BotTrail color={meta.color} isProcessing={isProcessing} />
-                      <AnimatePresence mode="wait">
-                        <PulseRing key={currentIcon + '-pulse'} color={meta.color} />
-                      </AnimatePresence>
-                      <AnimatePresence mode="wait">
-                        <StageBadge key={currentStage + '-badge'} stage={currentStage} color={meta.color} />
-                      </AnimatePresence>
-                      <CendekiaBot icon={currentIcon} stage={currentStage} isProcessing={isProcessing} />
-                    </div>
+                    <CastRing
+                      key={currentIcon}
+                      leader={leader}
+                      workers={workers}
+                      activeWorker={activeWorker}
+                      stageColor={meta.color}
+                      isProcessing={isProcessing}
+                    />
                     {isProcessing && <WalkingDots />}
                     {/* Active cast member badge — feels like an expert stepping up */}
                     <AnimatePresence mode="wait">
                       <motion.div
-                        key={activeMember.name + currentIcon}
+                        key={(activeWorker?.name || 'pesat') + currentIcon}
                         initial={{ opacity: 0, y: 6, scale: 0.92 }}
                         animate={{ opacity: 1, y: 0, scale: 1 }}
                         exit={{ opacity: 0, y: -6, scale: 0.92 }}
                         transition={{ duration: 0.28, ease: [0.16, 1, 0.3, 1] }}
                         className="flex items-center gap-2 px-3 py-1.5 rounded-full border bg-[rgba(26,31,53,0.7)] backdrop-blur-sm"
-                        style={{ borderColor: `${activeMember.accent}55` }}
+                        style={{ borderColor: `${activeWorker?.accent || leader.accent}55` }}
                       >
-                        <span className="text-[16px] leading-none">{activeMember.emoji}</span>
+                        <span className="text-[16px] leading-none">{activeWorker?.emoji || leader.emoji}</span>
                         <div className="flex flex-col leading-tight">
-                          <span className="text-[12px] font-semibold text-[#F8FAFC]">{activeMember.name}</span>
-                          <span className="text-[10px] text-[#A78BFA]">{activeMember.role}</span>
+                          <span className="text-[12px] font-semibold text-[#F8FAFC]">{activeWorker?.name || leader.name}</span>
+                          <span className="text-[10px] text-[#A78BFA]">{activeWorker?.role || leader.role}</span>
                         </div>
                       </motion.div>
                     </AnimatePresence>
@@ -1116,32 +981,29 @@ export default function ActivityPanel() {
                 {/* Sheet content */}
                 <div className="flex-1 overflow-y-auto p-4 scrollbar-chat">
                   <div className="flex flex-col items-center gap-3 mb-4">
-                    <div key={currentIcon} className="relative w-24 h-24 mx-auto">
-                      <FloatingSparkles isProcessing={isProcessing} />
-                      <BotTrail color={meta.color} isProcessing={isProcessing} />
-                      <AnimatePresence mode="wait">
-                        <PulseRing key={currentIcon + '-pulse'} color={meta.color} />
-                      </AnimatePresence>
-                      <AnimatePresence mode="wait">
-                        <StageBadge key={currentStage + '-badge'} stage={currentStage} color={meta.color} />
-                      </AnimatePresence>
-                      <CendekiaBot icon={currentIcon} stage={currentStage} isProcessing={isProcessing} />
-                    </div>
+                    <CastRing
+                      key={currentIcon}
+                      leader={leader}
+                      workers={workers}
+                      activeWorker={activeWorker}
+                      stageColor={meta.color}
+                      isProcessing={isProcessing}
+                    />
                     {isProcessing && <WalkingDots />}
                     <AnimatePresence mode="wait">
                       <motion.div
-                        key={activeMember.name + currentIcon}
+                        key={(activeWorker?.name || 'pesat') + currentIcon}
                         initial={{ opacity: 0, y: 6, scale: 0.92 }}
                         animate={{ opacity: 1, y: 0, scale: 1 }}
                         exit={{ opacity: 0, y: -6, scale: 0.92 }}
                         transition={{ duration: 0.28, ease: [0.16, 1, 0.3, 1] }}
                         className="flex items-center gap-2 px-3 py-1.5 rounded-full border bg-[rgba(26,31,53,0.7)] backdrop-blur-sm"
-                        style={{ borderColor: `${activeMember.accent}55` }}
+                        style={{ borderColor: `${activeWorker?.accent || leader.accent}55` }}
                       >
-                        <span className="text-[18px] leading-none">{activeMember.emoji}</span>
+                        <span className="text-[18px] leading-none">{activeWorker?.emoji || leader.emoji}</span>
                         <div className="flex flex-col leading-tight">
-                          <span className="text-[13px] font-semibold text-[#F8FAFC]">{activeMember.name}</span>
-                          <span className="text-[11px] text-[#A78BFA]">{activeMember.role}</span>
+                          <span className="text-[13px] font-semibold text-[#F8FAFC]">{activeWorker?.name || leader.name}</span>
+                          <span className="text-[11px] text-[#A78BFA]">{activeWorker?.role || leader.role}</span>
                         </div>
                       </motion.div>
                     </AnimatePresence>
@@ -1227,12 +1089,12 @@ export default function ActivityPanel() {
                   ) : currentStage === 'error' ? (
                     <span className="text-lg">⚠️</span>
                   ) : (
-                    <span className="text-lg">{activeMember.emoji}</span>
+                    <span className="text-lg">{activeWorker?.emoji || leader.emoji}</span>
                   )}
                 </div>
                 <div className="flex-1 min-w-0 text-left">
                   <p className="text-[13px] font-bold text-[#F8FAFC] leading-tight truncate">
-                    {activeMember.name} · {activeLine}
+                    {activeWorker?.name || leader.name} · {activeLine}
                   </p>
                   <p className="text-[11px] text-[#94A3B8] mt-0.5">
                     {meta.label} • {progress}%
