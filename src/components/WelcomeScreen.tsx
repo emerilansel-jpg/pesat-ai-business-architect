@@ -10,16 +10,8 @@ interface WelcomeScreenProps {
 
 const EXAMPLES = [
   {
-    label: 'Contoh brand',
-    text: 'Brand saya adalah Pesat AI, dengan domain pesat.ai didirikan oleh Nell VH praktisi SEO/AI Search dan AI internasional. Kami membantu UKM menemukan apps dan sistem AI yang paling cocok untuk menyelesaikan tantangan bisnis mereka.',
-  },
-  {
-    label: 'Contoh singkat',
-    text: 'Bisnis saya toko kue online di Jakarta, omset 50jt/bulan, mau scale tapi tim admin sudah overload.',
-  },
-  {
-    label: 'Contoh UKM',
-    text: 'Saya punya brand skincare lokal, jual lewat Shopee dan TikTok Shop,Repeat order-nya rendah dan CS kewalahan jawab pertanyaan repetitif.',
+    label: 'Contoh',
+    text: 'Brand saya adalah JetDigitalPro (jetdigitalpro.com), agensi digital marketing yang fokus ke SEO content & medical marketing. Kami bantu profesional kesehatan naikkan online presence & patient engagement.',
   },
 ];
 

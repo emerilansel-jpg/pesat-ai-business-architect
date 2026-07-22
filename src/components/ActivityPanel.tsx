@@ -591,6 +591,137 @@ function Confetti() {
  * This replaces the old single-mascot mount point and makes the panel read
  * as a real team working in parallel.
  */
+/**
+ * HeroFace — a cute round avatar with a face (eyes, smile, blush) plus
+ * waving little arms/legs. Each character gets its own accent color and an
+ * emoji badge in the corner so they stay recognizable. The face animates
+ * (blink + smile + arm wave) when processing.
+ */
+function HeroFace({
+  color,
+  emoji,
+  size = 36,
+  active = false,
+  isProcessing = false,
+  label,
+}: {
+  color: string;
+  emoji: string;
+  size?: number;
+  active?: boolean;
+  isProcessing?: boolean;
+  label?: string;
+}) {
+  const r = size / 2;
+  const eyeY = r * 0.42;
+  const eyeX = r * 0.32;
+  const eyeR = Math.max(1.4, r * 0.085);
+  const mouthW = r * 0.5;
+  const mouthH = r * 0.28;
+  const armLen = r * 0.42;
+
+  return (
+    <motion.div
+      className="relative"
+      style={{ width: size, height: size }}
+      animate={
+        isProcessing
+          ? { y: [0, -2, 0, -1, 0], rotate: [0, active ? 4 : 2, 0, active ? -4 : -2, 0] }
+          : { y: 0, rotate: 0 }
+      }
+      transition={{ duration: 1.6, repeat: Infinity, ease: 'easeInOut' }}
+    >
+      <svg width={size} height={size} viewBox={`0 0 ${size} ${size}`} overflow="visible">
+        {/* Legs */}
+        <motion.g
+          style={{ transformOrigin: `${r}px ${size * 0.92}px` }}
+          animate={isProcessing ? { rotate: [0, 8, 0, -8, 0] } : {}}
+          transition={{ duration: 0.9, repeat: Infinity, ease: 'easeInOut' }}
+        >
+          <rect x={r - 6} y={size * 0.9} width={4} height={Math.max(3, size * 0.1)} rx={2} fill={color} opacity={0.9} />
+          <rect x={r + 2} y={size * 0.9} width={4} height={Math.max(3, size * 0.1)} rx={2} fill={color} opacity={0.9} />
+        </motion.g>
+
+        {/* Arms */}
+        <motion.g
+          style={{ transformOrigin: `${r * 0.55}px ${r * 0.7}px` }}
+          animate={isProcessing ? { rotate: [0, -18, 0, -10, 0] } : {}}
+          transition={{ duration: 1.1, repeat: Infinity, ease: 'easeInOut' }}
+        >
+          <rect x={r * 0.55 - armLen} y={r * 0.66} width={armLen} height={3} rx={1.5} fill={color} opacity={0.95} />
+        </motion.g>
+        <motion.g
+          style={{ transformOrigin: `${r * 1.45}px ${r * 0.7}px` }}
+          animate={isProcessing ? { rotate: [0, 18, 0, 10, 0] } : {}}
+          transition={{ duration: 1.1, repeat: Infinity, ease: 'easeInOut', delay: 0.2 }}
+        >
+          <rect x={r} y={r * 0.66} width={armLen} height={3} rx={1.5} fill={color} opacity={0.95} />
+        </motion.g>
+
+        {/* Head */}
+        <circle cx={r} cy={r} r={r * 0.86} fill={`url(#hg-${color.slice(1)})`} />
+        <defs>
+          <radialGradient id={`hg-${color.slice(1)}`} cx="35%" cy="30%" r="75%">
+            <stop offset="0%" stopColor={color} stopOpacity={1} />
+            <stop offset="100%" stopColor={color} stopOpacity={0.7} />
+          </radialGradient>
+        </defs>
+
+        {/* Active glow ring */}
+        {active && <circle cx={r} cy={r} r={r * 0.92} fill="none" stroke="#fff" strokeWidth={1.5} opacity={0.9} />}
+
+        {/* Eyes (blink) */}
+        <motion.g
+          animate={isProcessing ? { scaleY: [1, 0.1, 1] } : {}}
+          transition={{ duration: 2.4, repeat: Infinity, ease: 'easeInOut', times: [0, 0.5, 1] }}
+          style={{ transformOrigin: `${r}px ${eyeY}px` }}
+        >
+          <circle cx={r - eyeX} cy={eyeY} r={eyeR} fill="#0B0F1A" />
+          <circle cx={r + eyeX} cy={eyeY} r={eyeR} fill="#0B0F1A" />
+        </motion.g>
+
+        {/* Smile */}
+        <motion.path
+          d={`M ${r - mouthW / 2} ${r * 1.15} Q ${r} ${r * 1.15 + mouthH} ${r + mouthW / 2} ${r * 1.15}`}
+          stroke="#0B0F1A"
+          strokeWidth={Math.max(1, r * 0.07)}
+          strokeLinecap="round"
+          fill="none"
+          animate={isProcessing ? { d: [
+            `M ${r - mouthW / 2} ${r * 1.15} Q ${r} ${r * 1.15 + mouthH} ${r + mouthW / 2} ${r * 1.15}`,
+            `M ${r - mouthW / 2} ${r * 1.2} Q ${r} ${r * 1.2 + mouthH * 0.4} ${r + mouthW / 2} ${r * 1.2}`,
+            `M ${r - mouthW / 2} ${r * 1.15} Q ${r} ${r * 1.15 + mouthH} ${r + mouthW / 2} ${r * 1.15}`,
+          ] } : {}}
+          transition={{ duration: 1.4, repeat: Infinity, ease: 'easeInOut' }}
+        />
+
+        {/* Blush */}
+        <circle cx={r - eyeX * 1.4} cy={r * 0.85} r={r * 0.12} fill="#F472B6" opacity={0.45} />
+        <circle cx={r + eyeX * 1.4} cy={r * 0.85} r={r * 0.12} fill="#F472B6" opacity={0.45} />
+      </svg>
+
+      {/* Emoji badge (top-right) so the character is still identifiable */}
+      <span
+        className="absolute -top-1 -right-1 rounded-full bg-white/95 flex items-center justify-center"
+        style={{ width: Math.max(12, size * 0.34), height: Math.max(12, size * 0.34), fontSize: Math.max(8, size * 0.22) }}
+      >
+        {emoji}
+      </span>
+
+      {/* Name label (active only) */}
+      {active && label && (
+        <motion.span
+          layoutId="hero-active-label"
+          className="absolute -bottom-3.5 whitespace-nowrap text-[9px] font-semibold text-white px-1.5 py-0.5 rounded-full"
+          style={{ background: color, left: '50%', transform: 'translateX(-50%)' }}
+        >
+          {label}
+        </motion.span>
+      )}
+    </motion.div>
+  );
+}
+
 function CastRing({
   leader,
   workers,
@@ -621,31 +752,26 @@ function CastRing({
         transition={{ duration: 2.2, repeat: Infinity, ease: 'easeInOut' }}
       />
 
-      {/* Leader: Pesat in the center */}
-      <motion.div
-        className="absolute rounded-full flex items-center justify-center text-white font-bold shadow-lg"
+      {/* Leader: Pesat in the center (cute face, big) */}
+      <div
+        className="absolute"
         style={{
-          width: leaderRadius * 2,
-          height: leaderRadius * 2,
           left: center - leaderRadius,
           top: center - leaderRadius,
-          background: `radial-gradient(circle at 30% 30%, ${leader.accent}, #4C1D95)`,
-          boxShadow: `0 0 18px ${leader.accent}66`,
+          filter: `drop-shadow(0 0 10px ${leader.accent}66)`,
         }}
-        animate={isProcessing ? { scale: [1, 1.05, 1] } : {}}
-        transition={{ duration: 1.4, repeat: Infinity, ease: 'easeInOut' }}
       >
-        <span className="text-[20px] leading-none">{leader.emoji}</span>
-      </motion.div>
-      <div
-        className="absolute text-center"
-        style={{ left: center - 40, top: center + leaderRadius + 4, width: 80 }}
-      >
-        <p className="text-[10px] font-semibold text-[#F8FAFC] leading-tight">{leader.name}</p>
-        <p className="text-[8px] text-[#A78BFA] leading-tight">{leader.role}</p>
+        <HeroFace
+          color={leader.accent}
+          emoji={leader.emoji}
+          size={leaderRadius * 2}
+          active
+          isProcessing={isProcessing}
+          label={leader.name}
+        />
       </div>
 
-      {/* Workers orbiting */}
+      {/* Workers orbiting (cute faces, smaller) */}
       {workers.map((w, i) => {
         const angle = (i / Math.max(workers.length, 1)) * Math.PI * 2 - Math.PI / 2;
         const x = center + Math.cos(angle) * workerRingRadius - workerRadius;
@@ -654,7 +780,7 @@ function CastRing({
         return (
           <motion.div
             key={w.name + i}
-            className="absolute rounded-full flex items-center justify-center"
+            className="absolute"
             initial={{ opacity: 0, scale: 0.5 }}
             animate={{
               opacity: 1,
@@ -674,25 +800,18 @@ function CastRing({
               height: workerRadius * 2,
               left: x,
               top: y,
-              background: `radial-gradient(circle at 30% 30%, ${w.accent}, ${w.accent}99)`,
-              boxShadow: isActive
-                ? `0 0 0 2px #fff, 0 0 14px ${w.accent}`
-                : `0 0 8px ${w.accent}55`,
               zIndex: isActive ? 5 : 2,
             }}
             title={`${w.name} · ${w.role}`}
           >
-            <span className="text-[14px] leading-none">{w.emoji}</span>
-            {/* floating label for active worker */}
-            {isActive && (
-              <motion.span
-                layoutId="active-worker-label"
-                className="absolute -bottom-4 whitespace-nowrap text-[9px] font-semibold text-white px-1.5 py-0.5 rounded-full"
-                style={{ background: w.accent }}
-              >
-                {w.name}
-              </motion.span>
-            )}
+            <HeroFace
+              color={w.accent}
+              emoji={w.emoji}
+              size={workerRadius * 2}
+              active={isActive}
+              isProcessing={isProcessing}
+              label={isActive ? w.name : undefined}
+            />
           </motion.div>
         );
       })}
@@ -775,6 +894,16 @@ export default function ActivityPanel() {
       return () => clearTimeout(t);
     }
   }, [isProcessing, logs.length, clearLogs]);
+
+  // CRITICAL UX fix: the moment AI processing ends, immediately collapse the
+  // mobile sheet so the dark backdrop goes away and the user can read the
+  // AI answer. Previously the sheet + bg-black/30 backdrop stayed open for
+  // up to 7s, making the screen look frozen/dark and blocking scroll/click.
+  useEffect(() => {
+    if (!isProcessing) {
+      setMobileOpen(false);
+    }
+  }, [isProcessing]);
 
   const openMobile = useCallback(() => {
     if (isProcessing || logs.length > 0) setMobileOpen(true);
